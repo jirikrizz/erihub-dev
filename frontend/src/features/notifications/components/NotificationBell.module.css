@@ -1,0 +1,26 @@
+.notificationDropdown {
+  margin-top: -6px;
+  padding-top: 4px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 18px;
+  background: var(--app-surface-elevated);
+}
+
+.notificationList {
+  padding-top: 2px;
+}
+
+.notificationItem {
+  border-radius: 14px;
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-panel);
+}
+
+.notificationButton {
+  transition: transform 160ms ease;
+  color: var(--app-text-inverse);
+}
+
+.notificationButton:hover {
+  transform: translateY(-1px);
+}

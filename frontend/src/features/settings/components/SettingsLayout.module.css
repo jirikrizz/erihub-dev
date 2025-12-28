@@ -1,0 +1,69 @@
+.layout {
+  gap: calc(var(--mantine-spacing-xl) * 0.85);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.title {
+  letter-spacing: -0.02em;
+  color: var(--app-heading-primary);
+}
+
+[data-theme='dark'] .title {
+  color: rgba(240, 244, 255, 0.96);
+}
+
+.subtitle {
+  color: var(--app-text-secondary);
+  max-width: 62ch;
+  font-size: 0.95rem;
+}
+
+.navColumn {
+  gap: 6px;
+}
+
+.navLink {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--app-text-secondary);
+  border: 1px solid transparent;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+[data-theme='dark'] .navLink {
+  background: rgba(30, 38, 60, 0.92);
+  color: rgba(225, 232, 255, 0.86);
+  border-color: rgba(132, 152, 210, 0.2);
+}
+
+.navLink:hover {
+  transform: translateY(-1px);
+  border-color: rgba(120, 150, 220, 0.32);
+}
+
+.navLink[data-active] {
+  background: var(--app-surface-panel);
+  border-color: rgba(120, 150, 220, 0.42);
+  color: var(--app-text-primary);
+}
+
+.navLabel {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.navDescription {
+  font-size: 0.78rem;
+  color: var(--app-text-tertiary);
+}
+
+[data-theme='dark'] .navDescription {
+  color: rgba(210, 220, 248, 0.7);
+}

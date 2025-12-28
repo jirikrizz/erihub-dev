@@ -1,0 +1,336 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-xl) * 0.7);
+}
+
+.metricsGrid {
+  gap: var(--mantine-spacing-md);
+}
+
+.metricCard {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.8);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-xs) * 1.1);
+}
+
+.metricLabel {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-tertiary);
+  font-weight: 650;
+}
+
+.metricValue {
+  font-size: 1.72rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  color: var(--app-text-primary);
+}
+
+.metricValue[data-tone='teal'] {
+  color: var(--mantine-color-teal-5);
+}
+
+.metricValue[data-tone='red'] {
+  color: var(--mantine-color-red-5);
+}
+
+.metricValue[data-tone='orange'] {
+  color: var(--mantine-color-orange-5);
+}
+
+.metricValue[data-tone='gray'] {
+  color: var(--app-text-tertiary);
+}
+
+.sectionCard {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.9);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-lg) * 0.6);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-lg);
+  flex-wrap: wrap;
+}
+
+.sectionHeaderTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionSubtitle {
+  font-size: 0.78rem;
+  color: var(--app-text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.filterSections {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-lg) * 0.55);
+}
+
+.ordersGrid {
+  gap: var(--mantine-spacing-lg);
+}
+
+.orderForm {
+  border: 1px dashed var(--app-border-subtle);
+  border-radius: 18px;
+  padding: calc(var(--mantine-spacing-lg) * 0.8);
+  background: var(--app-surface-panel);
+}
+
+.orderFileInfo {
+  font-size: 0.8rem;
+  color: var(--app-text-tertiary);
+  margin-top: 4px;
+}
+
+.ordersHint {
+  font-size: 0.78rem;
+  color: var(--app-text-tertiary);
+}
+
+.ordersList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+
+.ordersListHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+}
+
+.ordersTableWrapper {
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 18px;
+  background: var(--app-surface-panel);
+  padding: var(--mantine-spacing-sm);
+}
+
+.ordersTable {
+  min-width: 600px;
+  font-size: 0.86rem;
+}
+
+.ordersTable th {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-tertiary);
+}
+
+.ordersTable td:first-of-type {
+  white-space: normal;
+}
+
+.ordersTable td {
+  white-space: nowrap;
+}
+
+.ordersEmpty {
+  font-size: 0.85rem;
+  color: var(--app-text-tertiary);
+  padding: var(--mantine-spacing-md) 0;
+}
+
+.ordersArrivalCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orderedCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.actionBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-md);
+}
+
+.actionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-sm);
+}
+
+.selectionSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--mantine-spacing-sm) * 0.9);
+  color: var(--app-text-tertiary);
+  font-size: 0.82rem;
+}
+
+.tableCard {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.75);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-lg) * 0.55);
+}
+
+.tableScroll {
+  border-radius: 18px;
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-panel);
+  overflow: hidden;
+}
+
+.dataTable {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1400px;
+  font-size: 0.92rem;
+}
+
+.dataTable thead th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-tertiary);
+  background: var(--app-table-header-bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--app-border-strong);
+  padding-block: 12px;
+}
+
+.selectionHeader {
+  width: 38px;
+  min-width: 38px;
+  padding-inline: 10px;
+  background: var(--app-table-header-bg);
+}
+
+.selectionCell {
+  width: 38px;
+  min-width: 38px;
+  padding-inline: 10px;
+}
+
+.resizableHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.headerButton {
+  display: inline-flex;
+  flex: 1 1 auto;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  padding: 0;
+  background: none;
+}
+
+.headerButton:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.resizeHandle {
+  position: relative;
+  flex: 0 0 10px;
+  align-self: stretch;
+  cursor: col-resize;
+  margin-right: -6px;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-right: 1px solid transparent;
+}
+
+.resizeHandle:hover::after,
+.resizeHandle:active::after {
+  border-color: var(--mantine-color-blue-3);
+}
+
+.dataTable tbody tr {
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.dataTable tbody tr:hover {
+  background: rgba(110, 148, 255, 0.08);
+}
+
+.paginationRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 75em) {
+  .actionButtons {
+    width: 100%;
+  }
+
+  .actionButtons > * {
+    flex: 1 1 calc(50% - var(--mantine-spacing-sm));
+  }
+}
+
+@media (max-width: 62em) {
+  .sectionHeader {
+    align-items: stretch;
+  }
+
+  .actionBar {
+    gap: var(--mantine-spacing-sm);
+  }
+
+  .selectionSummary {
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 48em) {
+  .page {
+    gap: var(--mantine-spacing-xl);
+  }
+
+  .metricCard {
+    padding: var(--mantine-spacing-lg);
+  }
+
+  .tableScroll {
+    border-radius: 16px;
+  }
+
+  .actionButtons > * {
+    flex: 1 1 100%;
+  }
+}

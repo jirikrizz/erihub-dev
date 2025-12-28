@@ -1,0 +1,38 @@
+.tableWrapper {
+  min-height: 320px;
+}
+
+.diffPositive {
+  color: var(--mantine-color-orange-6);
+  font-weight: 600;
+}
+
+.diffNegative {
+  color: var(--mantine-color-red-6);
+  font-weight: 600;
+}
+
+.diffNeutral {
+  color: var(--mantine-color-teal-6);
+  font-weight: 600;
+}
+
+.sortableButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  color: var(--mantine-color-gray-7);
+  font-weight: 600;
+}
+
+.sortableButton:hover,
+.sortableButton:focus-visible,
+.sortableButton[data-active] {
+  color: var(--mantine-color-blue-6);
+}
+
+.sortIcon {
+  width: 14px;
+  height: 14px;
+}

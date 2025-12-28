@@ -1,0 +1,161 @@
+.page {
+  gap: calc(var(--mantine-spacing-xl) * 1.2);
+}
+
+.heroCard {
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border-subtle);
+  box-shadow: var(--app-shadow-soft);
+  padding: clamp(20px, 3vw, 36px);
+  color: var(--app-text-primary);
+}
+
+[data-theme='dark'] .heroCard {
+  background: var(--app-surface-panel);
+  box-shadow: var(--app-shadow-strong);
+  color: var(--app-text-primary);
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+}
+
+@media (min-width: 62em) {
+  .heroContent {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: clamp(24px, 3vw, 48px);
+  }
+}
+
+.heroPrimary {
+  flex: 2 1 60%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+}
+
+.heroTitle {
+  font-size: clamp(2rem, 3vw, 3.2rem);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+  color: var(--app-text-primary);
+}
+
+[data-theme='dark'] .heroTitle {
+}
+
+.badgeRow {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: var(--mantine-spacing-sm);
+}
+
+@media (min-width: 64em) {
+  .badgeRow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .badgeRow::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .badgeRow::-webkit-scrollbar-thumb {
+    background: var(--app-scrollbar);
+    border-radius: 999px;
+  }
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--app-text-secondary);
+  font-size: 0.95rem;
+}
+
+.heroSecondary {
+  flex: 1 1 320px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  align-items: flex-end;
+  text-align: right;
+  color: var(--app-text-secondary);
+}
+
+@media (max-width: 62em) {
+  .heroSecondary {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+.heroActions {
+  display: flex;
+  gap: var(--mantine-spacing-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 62em) {
+  .heroActions {
+    justify-content: flex-start;
+  }
+}
+
+.heroNote {
+  font-size: 0.82rem;
+  color: var(--app-text-tertiary);
+}
+
+.metricGrid {
+  gap: var(--mantine-spacing-md);
+}
+
+.metricCard {
+  gap: var(--mantine-spacing-xs);
+}
+
+.metricValue {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.metricLabel {
+  font-size: 0.85rem;
+  color: var(--app-text-secondary);
+}
+
+.tableCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.forecastList {
+  display: grid;
+  gap: var(--mantine-spacing-sm);
+}
+
+.filterParameterCard {
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--mantine-radius-md);
+  padding: var(--mantine-spacing-sm);
+}
+
+[data-theme='dark'] .filterParameterCard {
+  background: var(--app-surface-panel);
+  border-color: var(--app-border-strong);
+}

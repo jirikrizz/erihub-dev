@@ -1,0 +1,1738 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:tns="http://www.comgate.cz/protocols/eLogist/v1.26" targetNamespace="http://www.comgate.cz/protocols/eLogist/v1.26">
+  <wsdl:types>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="http://www.comgate.cz/protocols/eLogist/v1.26">
+      <xs:element name="BranchListGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:carrierId"/>
+            <xs:element minOccurs="0" ref="tns:service"/>
+            <xs:group minOccurs="0" ref="tns:grp_pagination"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="branch">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:branchId"/>
+            <xs:element name="name" type="tns:tp_text"/>
+            <xs:element ref="tns:street"/>
+            <xs:element ref="tns:city"/>
+            <xs:element name="country" type="tns:tp_country_code"/>
+            <xs:element minOccurs="0" ref="tns:url"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="url" type="tns:tp_text"/>
+      <xs:element name="BranchListGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:branch"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="CarrierListGet">
+        <xs:complexType/>
+      </xs:element>
+      <xs:element name="CarrierListGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:carrier"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="carrier">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:carrierId"/>
+            <xs:element name="name" type="tns:tp_text"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="service">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element ref="tns:name"/>
+                  <xs:element ref="tns:hasBranches"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="hasBranches" type="tns:tp_boolean"/>
+      <xs:element name="DeliveryOrder">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element minOccurs="0" ref="tns:customerOrderId"/>
+            <xs:element minOccurs="0" ref="tns:paymentId"/>
+            <xs:element minOccurs="0" ref="tns:orderDateTime"/>
+            <xs:element minOccurs="0" ref="tns:suspended"/>
+            <xs:element minOccurs="0" ref="tns:packingInstruction"/>
+            <xs:element minOccurs="0" ref="tns:sender"/>
+            <xs:element name="recipient">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="name" type="tns:tp_text"/>
+                  <xs:element name="address">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:element minOccurs="0" ref="tns:company"/>
+                        <xs:element ref="tns:street"/>
+                        <xs:element ref="tns:city"/>
+                        <xs:element ref="tns:postcode"/>
+                        <xs:element name="country" type="tns:tp_country_code"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                  <xs:element minOccurs="0" ref="tns:phone"/>
+                  <xs:element minOccurs="0" ref="tns:email"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="shipping">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element ref="tns:carrierId"/>
+                  <xs:element minOccurs="0" ref="tns:service"/>
+                  <xs:element minOccurs="0" ref="tns:branchId"/>
+                  <xs:element minOccurs="0" ref="tns:cod"/>
+                  <xs:element minOccurs="0" ref="tns:insurance"/>
+                  <xs:element minOccurs="0" ref="tns:comment"/>
+                  <xs:element minOccurs="0" ref="tns:sendAt"/>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:option"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="orderItems">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" name="orderItem">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:group ref="tns:grp_productspec"/>
+                        <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element minOccurs="0" ref="tns:documents"/>
+            <xs:element minOccurs="0" ref="tns:invoice"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="orderDateTime" type="tns:tp_timestamptz"/>
+      <xs:element name="suspended" type="tns:tp_boolean"/>
+      <xs:element name="packingInstruction" type="tns:tp_text"/>
+      <xs:element name="sender">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:label"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="label" type="tns:tp_text"/>
+      <xs:element name="company" type="tns:tp_text"/>
+      <xs:element name="street" type="tns:tp_text"/>
+      <xs:element name="city" type="tns:tp_text"/>
+      <xs:element name="postcode" type="tns:tp_text"/>
+      <xs:element name="phone" type="tns:tp_text"/>
+      <xs:element name="email" type="tns:tp_text"/>
+      <xs:element name="insurance">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="tns:tp_amount">
+              <xs:attribute name="currency" use="required" type="tns:tp_currency"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="comment" type="tns:tp_text"/>
+      <xs:element name="sendAt" type="tns:tp_date"/>
+      <xs:element name="option">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="name" type="tns:tp_text"/>
+            <xs:element name="value" type="tns:tp_text"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="documents">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:document"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="invoice">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:number"/>
+            <xs:element ref="tns:varSymbol"/>
+            <xs:element ref="tns:currency"/>
+            <xs:element ref="tns:dateIssued"/>
+            <xs:element ref="tns:dateTax"/>
+            <xs:element ref="tns:dateDue"/>
+            <xs:element ref="tns:totalSum"/>
+            <xs:element ref="tns:paymentType"/>
+            <xs:element name="address">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element minOccurs="0" name="name" type="tns:tp_text"/>
+                  <xs:element minOccurs="0" ref="tns:company"/>
+                  <xs:element ref="tns:street"/>
+                  <xs:element ref="tns:city"/>
+                  <xs:element ref="tns:postcode"/>
+                  <xs:element name="country" type="tns:tp_country_code"/>
+                  <xs:element minOccurs="0" ref="tns:ico"/>
+                  <xs:element minOccurs="0" ref="tns:dic"/>
+                  <xs:element minOccurs="0" ref="tns:icDph"/>
+                  <xs:element minOccurs="0" ref="tns:phone"/>
+                  <xs:element minOccurs="0" ref="tns:email"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element ref="tns:invoiceItems"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="number" type="tns:tp_string_id"/>
+      <xs:element name="varSymbol" type="tns:tp_string_id"/>
+      <xs:element name="currency" type="tns:tp_currency"/>
+      <xs:element name="dateIssued" type="tns:tp_date"/>
+      <xs:element name="dateTax" type="tns:tp_date"/>
+      <xs:element name="dateDue" type="tns:tp_date"/>
+      <xs:element name="totalSum" type="tns:tp_amount"/>
+      <xs:element name="paymentType" type="tns:tp_string_id"/>
+      <xs:element name="ico" type="tns:tp_text"/>
+      <xs:element name="dic" type="tns:tp_text"/>
+      <xs:element name="icDph" type="tns:tp_text"/>
+      <xs:element name="invoiceItems">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:invoiceItem"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="invoiceItem">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="code" type="tns:tp_text"/>
+            <xs:element name="name" type="tns:tp_text"/>
+            <xs:element name="quantity" type="tns:tp_amount"/>
+            <xs:element ref="tns:unitPrice"/>
+            <xs:element ref="tns:price"/>
+            <xs:element ref="tns:rateVAT"/>
+            <xs:element ref="tns:priceIncVAT"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="unitPrice" type="tns:tp_amount"/>
+      <xs:element name="price" type="tns:tp_amount"/>
+      <xs:element name="rateVAT" type="tns:tp_amount"/>
+      <xs:element name="priceIncVAT" type="tns:tp_amount"/>
+      <xs:element name="DeliveryOrderResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:deliveryOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderDocumentAdd">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:document"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderDocumentAddResponse" type="tns:eg_result"/>
+      <xs:element name="DeliveryOrderDraft">
+        <xs:annotation>
+          <xs:documentation>for internal purposes only</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element minOccurs="0" ref="tns:customerOrderId"/>
+            <xs:element minOccurs="0" ref="tns:paymentId"/>
+            <xs:element minOccurs="0" ref="tns:orderDateTime"/>
+            <xs:element minOccurs="0" ref="tns:sender"/>
+            <xs:element name="recipient">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element minOccurs="0" name="name" type="tns:tp_text"/>
+                  <xs:element name="address">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:element minOccurs="0" ref="tns:company"/>
+                        <xs:element minOccurs="0" ref="tns:street"/>
+                        <xs:element minOccurs="0" ref="tns:city"/>
+                        <xs:element minOccurs="0" ref="tns:postcode"/>
+                        <xs:element minOccurs="0" name="country" type="tns:tp_text"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                  <xs:element minOccurs="0" ref="tns:phone"/>
+                  <xs:element minOccurs="0" ref="tns:email"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="shipping">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element minOccurs="0" ref="tns:carrierId"/>
+                  <xs:element minOccurs="0" ref="tns:service"/>
+                  <xs:element minOccurs="0" ref="tns:branchId"/>
+                  <xs:element minOccurs="0" ref="tns:cod"/>
+                  <xs:element minOccurs="0" ref="tns:insurance"/>
+                  <xs:element minOccurs="0" ref="tns:comment"/>
+                  <xs:element minOccurs="0" ref="tns:sendAt"/>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:option"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="orderItems">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" name="orderItem">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:group ref="tns:grp_productspec"/>
+                        <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element minOccurs="0" ref="tns:documents"/>
+            <xs:element minOccurs="0" ref="tns:issues"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="issues">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:issue"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="issue" type="tns:tp_text"/>
+      <xs:element name="DeliveryOrderDraftResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:deliveryOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderHistoryGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderHistoryGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:deliveryOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderStatusGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderStatusGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:deliveryOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderStatusGetNews">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" ref="tns:projectId"/>
+            <xs:element ref="tns:afterDateTime"/>
+            <xs:element minOccurs="0" ref="tns:beforeDateTime"/>
+            <xs:group minOccurs="0" ref="tns:grp_pagination"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderStatusGetNewsResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:deliveryOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderStatusSet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:status"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DeliveryOrderStatusSetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:deliveryOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="InventoryChangesGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:afterDateTime"/>
+            <xs:element minOccurs="0" ref="tns:beforeDateTime"/>
+            <xs:element minOccurs="0" ref="tns:restrictType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="restrictType">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="receipt"/>
+            <xs:enumeration value="expedition"/>
+            <xs:enumeration value="return"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="InventoryChangesGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element ref="tns:receipt"/>
+                <xs:element ref="tns:expedition"/>
+                <xs:element ref="tns:return"/>
+              </xs:choice>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="receipt">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:receiptId"/>
+            <xs:element ref="tns:date"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:supplier"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="item">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element ref="tns:productId"/>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+                  <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="receiptId" type="tns:tp_string_id"/>
+      <xs:element name="date" type="tns:tp_date"/>
+      <xs:element name="expedition">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:expeditionId"/>
+            <xs:element ref="tns:date"/>
+            <xs:element minOccurs="0" ref="tns:projectId"/>
+            <xs:element minOccurs="0" ref="tns:orderId"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="item">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element ref="tns:productId"/>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+                  <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="expeditionId" type="tns:tp_string_id"/>
+      <xs:element name="return">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:returnId"/>
+            <xs:element ref="tns:date"/>
+            <xs:element ref="tns:expeditionId"/>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:reporter"/>
+            <xs:element ref="tns:reason"/>
+            <xs:element ref="tns:description"/>
+            <xs:element ref="tns:contact"/>
+            <xs:element ref="tns:bankAccount"/>
+            <xs:element ref="tns:withLetter"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" name="item">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element ref="tns:productId"/>
+                  <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+                  <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                  <xs:element ref="tns:condition"/>
+                  <xs:element ref="tns:note"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="returnId" type="tns:tp_string_id"/>
+      <xs:element name="reporter" type="tns:tp_text"/>
+      <xs:element name="reason" type="tns:tp_text"/>
+      <xs:element name="contact" type="tns:tp_text"/>
+      <xs:element name="bankAccount" type="tns:tp_text"/>
+      <xs:element name="withLetter" type="tns:tp_boolean"/>
+      <xs:element name="condition" type="tns:tp_string_id"/>
+      <xs:element name="note" type="tns:tp_text"/>
+      <xs:element name="PaymentDetailGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:account"/>
+            <xs:element ref="tns:paymentId"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="account" type="tns:tp_text"/>
+      <xs:element name="PaymentDetailGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:paidOrder"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="paidOrder">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:amount"/>
+            <xs:element ref="tns:currency"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="amount" type="tns:tp_amount"/>
+      <xs:element name="PaymentListGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:afterDate"/>
+            <xs:group minOccurs="0" ref="tns:grp_pagination"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="afterDate" type="tns:tp_date"/>
+      <xs:element name="PaymentListGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" name="payment">
+                  <xs:complexType>
+                    <xs:sequence>
+                      <xs:element ref="tns:account"/>
+                      <xs:element ref="tns:paymentId"/>
+                      <xs:element ref="tns:date"/>
+                      <xs:element ref="tns:amount"/>
+                      <xs:element ref="tns:currency"/>
+                    </xs:sequence>
+                  </xs:complexType>
+                </xs:element>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ProductLabelDelete">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:productId"/>
+            <xs:element ref="tns:language"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ProductLabelDeleteResponse" type="tns:eg_result"/>
+      <xs:element name="ProductLabelSet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:productId"/>
+            <xs:element ref="tns:language"/>
+            <xs:element name="content" type="tns:tp_text"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="language" type="tns:tp_string_id"/>
+      <xs:element name="ProductLabelSetResponse" type="tns:eg_result"/>
+      <xs:element name="ProductUpdate" type="tns:tp_productsheet"/>
+      <xs:element name="ProductUpdateResponse" type="tns:eg_result"/>
+      <xs:element name="ProjectListGet">
+        <xs:complexType/>
+      </xs:element>
+      <xs:element name="ProjectListGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element maxOccurs="unbounded" ref="tns:project"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="project">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element name="name" type="tns:tp_text"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ReceivedPaymentsGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:afterDate"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ReceivedPaymentsGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" name="payment">
+                  <xs:complexType>
+                    <xs:sequence>
+                      <xs:element ref="tns:projectId"/>
+                      <xs:element ref="tns:orderId"/>
+                      <xs:element ref="tns:date"/>
+                      <xs:element ref="tns:amount"/>
+                      <xs:element ref="tns:currency"/>
+                    </xs:sequence>
+                  </xs:complexType>
+                </xs:element>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StockInventoryGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" ref="tns:filter"/>
+            <xs:element minOccurs="0" ref="tns:subset"/>
+            <xs:element minOccurs="0" ref="tns:disregardVariants"/>
+            <xs:group minOccurs="0" ref="tns:grp_pagination"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="filter" type="tns:eg_product_filter"/>
+      <xs:element name="subset">
+        <xs:simpleType>
+          <xs:restriction base="xs:token">
+            <xs:enumeration value="IN_STOCK_OR_INCOMING"/>
+            <xs:enumeration value="IN_STOCK"/>
+            <xs:enumeration value="RUNNING_SHORT"/>
+            <xs:enumeration value="EXPIRED"/>
+            <xs:enumeration value="NEAR_EXPIRATION"/>
+            <xs:enumeration value="ALL"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="StockInventoryGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:stockInventory"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StockInventoryGetNews">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:afterDateTime"/>
+            <xs:element minOccurs="0" ref="tns:disregardVariants"/>
+            <xs:group minOccurs="0" ref="tns:grp_pagination"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StockInventoryGetNewsResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:stockInventory"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrder">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:supplier"/>
+            <xs:element minOccurs="0" ref="tns:deliveryDate"/>
+            <xs:element minOccurs="0" ref="tns:note"/>
+            <xs:element name="orderItems">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element maxOccurs="unbounded" name="orderItem">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:group ref="tns:grp_productspec"/>
+                        <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                        <xs:element minOccurs="0" ref="tns:unitValue"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="deliveryDate" type="tns:tp_date"/>
+      <xs:element name="unitValue" type="tns:tp_amount"/>
+      <xs:element name="StorageOrderResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:storageOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:orderId"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element ref="tns:orderId"/>
+                <xs:element ref="tns:supplier"/>
+                <xs:element minOccurs="0" ref="tns:deliveryDate"/>
+                <xs:element minOccurs="0" ref="tns:note"/>
+                <xs:element name="orderItems">
+                  <xs:complexType>
+                    <xs:sequence>
+                      <xs:element maxOccurs="unbounded" name="orderItem">
+                        <xs:complexType>
+                          <xs:sequence>
+                            <xs:element ref="tns:productId"/>
+                            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+                            <xs:element name="quantity" type="tns:tp_positive_amount"/>
+                          </xs:sequence>
+                        </xs:complexType>
+                      </xs:element>
+                    </xs:sequence>
+                  </xs:complexType>
+                </xs:element>
+                <xs:element ref="tns:receivedItems"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="receivedItems">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:receivedItem"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="receivedItem">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:date"/>
+            <xs:element ref="tns:productId"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+            <xs:element name="quantity" type="tns:tp_positive_amount"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderHistoryGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:orderId"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderHistoryGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:storageOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderStatusGet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:orderId"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderStatusGetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:storageOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderStatusGetNews">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:afterDateTime"/>
+            <xs:element minOccurs="0" ref="tns:beforeDateTime"/>
+            <xs:group minOccurs="0" ref="tns:grp_pagination"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderStatusGetNewsResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:storageOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderStatusSet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:status"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="StorageOrderStatusSetResponse">
+        <xs:complexType>
+          <xs:complexContent>
+            <xs:extension base="tns:eg_result">
+              <xs:sequence>
+                <xs:element minOccurs="0" ref="tns:storageOrderStatus"/>
+              </xs:sequence>
+            </xs:extension>
+          </xs:complexContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:simpleType name="tp_sequence">
+        <xs:restriction base="xs:unsignedLong"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_type">
+        <xs:restriction base="xs:integer"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_text">
+        <xs:restriction base="xs:string"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_string_id">
+        <xs:restriction base="xs:token"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_timestamptz">
+        <xs:restriction base="xs:dateTime"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_date">
+        <xs:restriction base="xs:date"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_count">
+        <xs:restriction base="xs:unsignedInt"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_amount">
+        <xs:restriction base="xs:decimal"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_binary">
+        <xs:restriction base="xs:base64Binary"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_boolean">
+        <xs:restriction base="xs:boolean"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_mobile">
+        <xs:restriction base="xs:string">
+          <xs:pattern value="\+[0-9]+"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_country_code">
+        <xs:restriction base="xs:string">
+          <xs:pattern value="[A-Z]{2}"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_email">
+        <xs:restriction base="xs:string">
+          <xs:pattern value=".+@.+\..{2,}"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_currency">
+        <xs:restriction base="xs:token">
+          <xs:length value="3"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_barcode">
+        <xs:restriction base="xs:token"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_md5sum">
+        <xs:restriction base="xs:string">
+          <xs:pattern value="[0-9a-f]{32}"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_payment_id">
+        <xs:restriction base="xs:unsignedLong">
+          <xs:totalDigits value="10"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_positive_amount">
+        <xs:restriction base="xs:decimal">
+          <xs:minExclusive value="0"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_nz_count">
+        <xs:restriction base="xs:integer">
+          <xs:minExclusive value="0"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:simpleType name="tp_weight">
+        <xs:restriction base="xs:decimal"/>
+      </xs:simpleType>
+      <xs:simpleType name="tp_dimension">
+        <xs:restriction base="xs:decimal"/>
+      </xs:simpleType>
+      <xs:complexType name="eg_result">
+        <xs:sequence>
+          <xs:element ref="tns:result"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:element name="result">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="code" type="tns:tp_type"/>
+            <xs:element ref="tns:description"/>
+            <xs:element minOccurs="0" ref="tns:totalItems"/>
+            <xs:element minOccurs="0" ref="tns:totalPages"/>
+            <xs:element minOccurs="0" ref="tns:pageSize"/>
+            <xs:element minOccurs="0" ref="tns:page"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="description" type="tns:tp_text"/>
+      <xs:element name="totalItems" type="tns:tp_count"/>
+      <xs:element name="totalPages" type="tns:tp_count"/>
+      <xs:element name="pageSize" type="tns:tp_nz_count"/>
+      <xs:element name="page" type="tns:tp_nz_count"/>
+      <xs:element name="projectId" type="tns:tp_string_id"/>
+      <xs:element name="orderId" type="tns:tp_string_id"/>
+      <xs:attributeGroup name="at_orderid">
+        <xs:attribute name="orderId" use="required" type="tns:tp_string_id"/>
+      </xs:attributeGroup>
+      <xs:element name="customerOrderId" type="tns:tp_string_id"/>
+      <xs:element name="paymentId" type="tns:tp_payment_id"/>
+      <xs:element name="productId" type="tns:tp_string_id"/>
+      <xs:element name="carrierId" type="tns:tp_string_id"/>
+      <xs:element name="service" type="tns:tp_string_id"/>
+      <xs:element name="branchId" type="tns:tp_string_id"/>
+      <xs:element name="status" type="tns:tp_string_id"/>
+      <xs:element name="changed" type="tns:tp_timestamptz"/>
+      <xs:element name="trackingNo" type="tns:tp_string_id"/>
+      <xs:element name="variant">
+        <xs:complexType>
+          <xs:attribute name="attribute" use="required" type="tns:tp_string_id"/>
+          <xs:attribute name="value" use="required" type="tns:tp_text"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="deliveryOrderStatus">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:projectId"/>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:changed"/>
+            <xs:element ref="tns:status"/>
+            <xs:element minOccurs="0" ref="tns:carrierId"/>
+            <xs:element minOccurs="0" ref="tns:service"/>
+            <xs:element minOccurs="0" ref="tns:branchId"/>
+            <xs:element minOccurs="0" ref="tns:carrierWeb"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:trackingNo"/>
+            <xs:element minOccurs="0" ref="tns:sysOrderId"/>
+            <xs:element minOccurs="0" ref="tns:itemCount"/>
+            <xs:element minOccurs="0" ref="tns:unitCount"/>
+            <xs:element minOccurs="0" ref="tns:destinationCountry"/>
+            <xs:element minOccurs="0" ref="tns:cod"/>
+            <xs:element minOccurs="0" ref="tns:dateCreated"/>
+            <xs:element minOccurs="0" ref="tns:problem"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:packageSet"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="carrierWeb" type="tns:tp_text"/>
+      <xs:element name="sysOrderId" type="tns:tp_string_id"/>
+      <xs:element name="itemCount" type="xs:integer"/>
+      <xs:element name="unitCount" type="tns:tp_amount"/>
+      <xs:element name="destinationCountry" type="tns:tp_country_code"/>
+      <xs:element name="cod">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="tns:tp_amount">
+              <xs:attribute name="currency" use="required" type="tns:tp_currency"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="dateCreated" type="tns:tp_date"/>
+      <xs:element name="problem" type="tns:tp_text"/>
+      <xs:element name="packageSet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element minOccurs="0" ref="tns:dateProcessed"/>
+            <xs:element minOccurs="0" ref="tns:processingFee"/>
+            <xs:element minOccurs="0" ref="tns:shippingFee"/>
+            <xs:element ref="tns:paidByCard"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:package"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:serialNumberOut"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="dateProcessed" type="tns:tp_date"/>
+      <xs:element name="processingFee">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="tns:tp_amount">
+              <xs:attribute name="currency" use="required" type="tns:tp_currency"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="shippingFee">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="tns:tp_amount">
+              <xs:attribute name="currency" use="required" type="tns:tp_currency"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="paidByCard" type="tns:tp_boolean"/>
+      <xs:element name="package">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:sysPackageId"/>
+            <xs:element minOccurs="0" ref="tns:trackingNo"/>
+            <xs:element minOccurs="0" ref="tns:weight"/>
+            <xs:element minOccurs="0" ref="tns:length"/>
+            <xs:element minOccurs="0" ref="tns:width"/>
+            <xs:element minOccurs="0" ref="tns:height"/>
+            <xs:element minOccurs="0" ref="tns:packaging"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="sysPackageId" type="tns:tp_string_id"/>
+      <xs:element name="weight" type="tns:tp_weight"/>
+      <xs:element name="length" type="tns:tp_dimension"/>
+      <xs:element name="width" type="tns:tp_dimension"/>
+      <xs:element name="height" type="tns:tp_dimension"/>
+      <xs:element name="packaging" type="tns:tp_text"/>
+      <xs:element name="serialNumberOut">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:productId"/>
+            <xs:element ref="tns:serialNumber"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="serialNumber" type="tns:tp_text"/>
+      <xs:element name="storageOrderStatus">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:orderId"/>
+            <xs:element ref="tns:changed"/>
+            <xs:element ref="tns:status"/>
+            <xs:element minOccurs="0" ref="tns:lastReceiptDate"/>
+            <xs:element minOccurs="0" ref="tns:extrasReceived"/>
+            <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:serialNumberIn"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="lastReceiptDate" type="tns:tp_date"/>
+      <xs:element name="extrasReceived" type="tns:tp_boolean"/>
+      <xs:element name="serialNumberIn">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:productId"/>
+            <xs:element ref="tns:serialNumber"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:complexType name="eg_product_filter">
+        <xs:sequence>
+          <xs:element maxOccurs="unbounded" name="product">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+              </xs:sequence>
+              <xs:attribute name="productId" use="required" type="tns:tp_string_id"/>
+            </xs:complexType>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:element name="stockInventory" type="tns:eg_sip"/>
+      <xs:complexType name="eg_sip">
+        <xs:sequence>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="product">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+                <xs:element ref="tns:stored"/>
+                <xs:element ref="tns:expected"/>
+                <xs:element ref="tns:allocated"/>
+                <xs:element ref="tns:available"/>
+                <xs:element ref="tns:aside"/>
+                <xs:element ref="tns:demanded"/>
+                <xs:element minOccurs="0" name="value" type="tns:tp_amount"/>
+              </xs:sequence>
+              <xs:attribute name="productId" use="required" type="tns:tp_string_id"/>
+            </xs:complexType>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:element name="stored" type="tns:tp_count"/>
+      <xs:element name="expected" type="tns:tp_count"/>
+      <xs:element name="allocated" type="tns:tp_count"/>
+      <xs:element name="available" type="tns:tp_count"/>
+      <xs:element name="aside" type="tns:tp_count"/>
+      <xs:element name="demanded" type="tns:tp_count"/>
+      <xs:group name="grp_productspec">
+        <xs:sequence>
+          <xs:choice>
+            <xs:element ref="tns:productSheet"/>
+            <xs:element ref="tns:productId"/>
+          </xs:choice>
+          <xs:element minOccurs="0" maxOccurs="unbounded" ref="tns:variant"/>
+        </xs:sequence>
+      </xs:group>
+      <xs:element name="productSheet" type="tns:tp_productsheet"/>
+      <xs:complexType name="tp_productsheet">
+        <xs:sequence>
+          <xs:element ref="tns:productId"/>
+          <xs:element minOccurs="0" ref="tns:barcode"/>
+          <xs:element minOccurs="0" ref="tns:productNumber"/>
+          <xs:element ref="tns:name"/>
+          <xs:element minOccurs="0" ref="tns:description"/>
+          <xs:element minOccurs="0" ref="tns:vendor"/>
+          <xs:element minOccurs="0" ref="tns:attributeSet"/>
+          <xs:element ref="tns:quantityUnit"/>
+          <xs:element minOccurs="0" ref="tns:enabled"/>
+          <xs:element minOccurs="0" ref="tns:expirable"/>
+          <xs:element minOccurs="0" ref="tns:food"/>
+          <xs:element minOccurs="0" ref="tns:lotTracking"/>
+          <xs:element minOccurs="0" ref="tns:minimalSupply"/>
+          <xs:element minOccurs="0" ref="tns:valuable"/>
+          <xs:element minOccurs="0" ref="tns:labelIncoming"/>
+          <xs:element minOccurs="0" ref="tns:labelOutgoing"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:element name="barcode" type="tns:tp_barcode"/>
+      <xs:element name="productNumber" type="tns:tp_string_id"/>
+      <xs:element name="name" type="tns:tp_string_id"/>
+      <xs:element name="vendor" type="tns:tp_string_id"/>
+      <xs:element name="attributeSet">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element maxOccurs="unbounded" ref="tns:attribute"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="attribute" type="tns:tp_string_id"/>
+      <xs:element name="quantityUnit" type="tns:tp_string_id"/>
+      <xs:element name="enabled" type="tns:tp_boolean"/>
+      <xs:element name="expirable" type="tns:tp_boolean"/>
+      <xs:element name="food" type="tns:tp_boolean"/>
+      <xs:element name="lotTracking" type="tns:tp_boolean"/>
+      <xs:element name="minimalSupply" type="tns:tp_amount"/>
+      <xs:element name="valuable" type="tns:tp_boolean"/>
+      <xs:element name="labelIncoming" type="tns:tp_boolean"/>
+      <xs:element name="labelOutgoing" type="tns:tp_boolean"/>
+      <xs:element name="afterDateTime" type="tns:tp_timestamptz"/>
+      <xs:element name="beforeDateTime" type="tns:tp_timestamptz"/>
+      <xs:element name="disregardVariants" type="tns:tp_boolean"/>
+      <xs:group name="grp_pagination">
+        <xs:sequence>
+          <xs:element ref="tns:pageSize"/>
+          <xs:element ref="tns:page"/>
+        </xs:sequence>
+      </xs:group>
+      <xs:element name="supplier" type="tns:tp_text"/>
+      <xs:element name="document">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="tns:title"/>
+            <xs:element ref="tns:type"/>
+            <xs:element minOccurs="0" ref="tns:purpose"/>
+            <xs:element name="content">
+              <xs:complexType>
+                <xs:simpleContent>
+                  <xs:extension base="tns:tp_binary">
+                    <xs:attribute name="md5checksum" type="tns:tp_md5sum"/>
+                  </xs:extension>
+                </xs:simpleContent>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="title" type="tns:tp_text"/>
+      <xs:element name="type" type="tns:tp_string_id"/>
+      <xs:element name="purpose" type="tns:tp_string_id"/>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:portType name="ComGateELogist">
+    <wsdl:operation name="BranchListGet">
+      <wsdl:input message="tns:BranchListGet_MsgIn"/>
+      <wsdl:output message="tns:BranchListGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="CarrierListGet">
+      <wsdl:input message="tns:CarrierListGet_MsgIn"/>
+      <wsdl:output message="tns:CarrierListGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrder">
+      <wsdl:input message="tns:DeliveryOrder_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrder_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderDocumentAdd">
+      <wsdl:input message="tns:DeliveryOrderDocumentAdd_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrderDocumentAdd_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderDraft">
+      <wsdl:input message="tns:DeliveryOrderDraft_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrderDraft_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderHistoryGet">
+      <wsdl:input message="tns:DeliveryOrderHistoryGet_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrderHistoryGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderStatusGet">
+      <wsdl:input message="tns:DeliveryOrderStatusGet_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrderStatusGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderStatusGetNews">
+      <wsdl:input message="tns:DeliveryOrderStatusGetNews_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrderStatusGetNews_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderStatusSet">
+      <wsdl:input message="tns:DeliveryOrderStatusSet_MsgIn"/>
+      <wsdl:output message="tns:DeliveryOrderStatusSet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="InventoryChangesGet">
+      <wsdl:input message="tns:InventoryChangesGet_MsgIn"/>
+      <wsdl:output message="tns:InventoryChangesGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="PaymentDetailGet">
+      <wsdl:input message="tns:PaymentDetailGet_MsgIn"/>
+      <wsdl:output message="tns:PaymentDetailGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="PaymentListGet">
+      <wsdl:input message="tns:PaymentListGet_MsgIn"/>
+      <wsdl:output message="tns:PaymentListGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="ProductLabelDelete">
+      <wsdl:input message="tns:ProductLabelDelete_MsgIn"/>
+      <wsdl:output message="tns:ProductLabelDelete_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="ProductLabelSet">
+      <wsdl:input message="tns:ProductLabelSet_MsgIn"/>
+      <wsdl:output message="tns:ProductLabelSet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="ProductUpdate">
+      <wsdl:input message="tns:ProductUpdate_MsgIn"/>
+      <wsdl:output message="tns:ProductUpdate_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="ProjectListGet">
+      <wsdl:input message="tns:ProjectListGet_MsgIn"/>
+      <wsdl:output message="tns:ProjectListGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="ReceivedPaymentsGet">
+      <wsdl:input message="tns:ReceivedPaymentsGet_MsgIn"/>
+      <wsdl:output message="tns:ReceivedPaymentsGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StockInventoryGet">
+      <wsdl:input message="tns:StockInventoryGet_MsgIn"/>
+      <wsdl:output message="tns:StockInventoryGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StockInventoryGetNews">
+      <wsdl:input message="tns:StockInventoryGetNews_MsgIn"/>
+      <wsdl:output message="tns:StockInventoryGetNews_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrder">
+      <wsdl:input message="tns:StorageOrder_MsgIn"/>
+      <wsdl:output message="tns:StorageOrder_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderGet">
+      <wsdl:input message="tns:StorageOrderGet_MsgIn"/>
+      <wsdl:output message="tns:StorageOrderGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderHistoryGet">
+      <wsdl:input message="tns:StorageOrderHistoryGet_MsgIn"/>
+      <wsdl:output message="tns:StorageOrderHistoryGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderStatusGet">
+      <wsdl:input message="tns:StorageOrderStatusGet_MsgIn"/>
+      <wsdl:output message="tns:StorageOrderStatusGet_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderStatusGetNews">
+      <wsdl:input message="tns:StorageOrderStatusGetNews_MsgIn"/>
+      <wsdl:output message="tns:StorageOrderStatusGetNews_MsgOut"/>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderStatusSet">
+      <wsdl:input message="tns:StorageOrderStatusSet_MsgIn"/>
+      <wsdl:output message="tns:StorageOrderStatusSet_MsgOut"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:message name="BranchListGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:BranchListGet"/>
+  </wsdl:message>
+  <wsdl:message name="BranchListGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:BranchListGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="CarrierListGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:CarrierListGet"/>
+  </wsdl:message>
+  <wsdl:message name="CarrierListGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:CarrierListGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrder_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrder"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrder_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderDocumentAdd_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderDocumentAdd"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderDocumentAdd_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderDocumentAddResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderDraft_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderDraft"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderDraft_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderDraftResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderHistoryGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderHistoryGet"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderHistoryGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderHistoryGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderStatusGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderStatusGet"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderStatusGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderStatusGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderStatusGetNews_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderStatusGetNews"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderStatusGetNews_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderStatusGetNewsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderStatusSet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderStatusSet"/>
+  </wsdl:message>
+  <wsdl:message name="DeliveryOrderStatusSet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:DeliveryOrderStatusSetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="InventoryChangesGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:InventoryChangesGet"/>
+  </wsdl:message>
+  <wsdl:message name="InventoryChangesGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:InventoryChangesGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="PaymentDetailGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:PaymentDetailGet"/>
+  </wsdl:message>
+  <wsdl:message name="PaymentDetailGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:PaymentDetailGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="PaymentListGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:PaymentListGet"/>
+  </wsdl:message>
+  <wsdl:message name="PaymentListGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:PaymentListGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ProductLabelDelete_MsgIn">
+    <wsdl:part name="xml_data" element="tns:ProductLabelDelete"/>
+  </wsdl:message>
+  <wsdl:message name="ProductLabelDelete_MsgOut">
+    <wsdl:part name="xml_data" element="tns:ProductLabelDeleteResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ProductLabelSet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:ProductLabelSet"/>
+  </wsdl:message>
+  <wsdl:message name="ProductLabelSet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:ProductLabelSetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ProductUpdate_MsgIn">
+    <wsdl:part name="xml_data" element="tns:ProductUpdate"/>
+  </wsdl:message>
+  <wsdl:message name="ProductUpdate_MsgOut">
+    <wsdl:part name="xml_data" element="tns:ProductUpdateResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ProjectListGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:ProjectListGet"/>
+  </wsdl:message>
+  <wsdl:message name="ProjectListGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:ProjectListGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ReceivedPaymentsGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:ReceivedPaymentsGet"/>
+  </wsdl:message>
+  <wsdl:message name="ReceivedPaymentsGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:ReceivedPaymentsGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StockInventoryGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StockInventoryGet"/>
+  </wsdl:message>
+  <wsdl:message name="StockInventoryGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StockInventoryGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StockInventoryGetNews_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StockInventoryGetNews"/>
+  </wsdl:message>
+  <wsdl:message name="StockInventoryGetNews_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StockInventoryGetNewsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrder_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StorageOrder"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrder_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StorageOrderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StorageOrderGet"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StorageOrderGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderHistoryGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StorageOrderHistoryGet"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderHistoryGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StorageOrderHistoryGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderStatusGet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StorageOrderStatusGet"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderStatusGet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StorageOrderStatusGetResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderStatusGetNews_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StorageOrderStatusGetNews"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderStatusGetNews_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StorageOrderStatusGetNewsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderStatusSet_MsgIn">
+    <wsdl:part name="xml_data" element="tns:StorageOrderStatusSet"/>
+  </wsdl:message>
+  <wsdl:message name="StorageOrderStatusSet_MsgOut">
+    <wsdl:part name="xml_data" element="tns:StorageOrderStatusSetResponse"/>
+  </wsdl:message>
+  <wsdl:binding name="ComGateELogist_SOAP" type="tns:ComGateELogist">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+    <wsdl:operation name="BranchListGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/BranchListGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="CarrierListGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/CarrierListGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrder">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrder" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderDocumentAdd">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrderDocumentAdd" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderDraft">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrderDraft" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderHistoryGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrderHistoryGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderStatusGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrderStatusGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderStatusGetNews">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrderStatusGetNews" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="DeliveryOrderStatusSet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/DeliveryOrderStatusSet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="InventoryChangesGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/InventoryChangesGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="PaymentDetailGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/PaymentDetailGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="PaymentListGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/PaymentListGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="ProductLabelDelete">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/ProductLabelDelete" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="ProductLabelSet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/ProductLabelSet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="ProductUpdate">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/ProductUpdate" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="ProjectListGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/ProjectListGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="ReceivedPaymentsGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/ReceivedPaymentsGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StockInventoryGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StockInventoryGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StockInventoryGetNews">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StockInventoryGetNews" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrder">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StorageOrder" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StorageOrderGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderHistoryGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StorageOrderHistoryGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderStatusGet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StorageOrderStatusGet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderStatusGetNews">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StorageOrderStatusGetNews" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="StorageOrderStatusSet">
+      <soap:operation style="document" soapAction="http://www.comgate.cz/protocols/eLogist/v1.26/StorageOrderStatusSet" soapActionRequired="true"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ComGateELogistService">
+    <wsdl:port name="ComGateELogistService_SOAP" binding="tns:ComGateELogist_SOAP">
+      <soap:address location="https://elogist.shipmall.cz/api/soap"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

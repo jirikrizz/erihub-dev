@@ -1,0 +1,22 @@
+.metricCard {
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+}
+
+.metricLabel {
+  color: var(--app-text-secondary, #4b5563);
+  font-size: 0.95rem;
+}
+
+.metricValue {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--app-text-primary, #111827);
+}
+
+.metricDescription {
+  color: var(--app-text-tertiary, #6b7280);
+  font-size: 0.9rem;
+}

@@ -1,0 +1,112 @@
+{%- set product_id = page_variables("67fc1fb531414457661bb07b") -%}
+{%- set catalog_data = catalogs.products_cz_v2.item_by_id(product_id) -%}
+{%- set product_master_id = catalog_data.product_master_id -%}
+{%- set fragrance_1 = catalog_data.fragrance_type_reco.split(',')[0] | trim -%}
+{%- set fragrance_2 = catalog_data.fragrance_type_reco.split(',')[1] | trim -%}
+{%- set filter = [{'property': 'fragrance_type_reco', 'constraint': { 'type': 'string', 'operator': 'contains', 'operands': [{'type': 'constant', 'value': fragrance_1}]}}, {'property': 'fragrance_type_reco', 'constraint': { 'type': 'string', 'operator': 'contains', 'operands': [{'type': 'constant', 'value': fragrance_2}]}}] -%}
+{%- set reco = recommendations('67fc1e9a892775e4b84e70ff', size = 8, items = {product_master_id:1}, catalogFilter = filter) -%}
+{%- if reco | length < 3 -%}
+{%- abort -%}
+{%- endif -%}
+
+
+<div class="homepage-group-title homepage-products-heading-1 h4" style="margin-bottom: 30px;font-weight: 600;">Podobné produkty</div>
+<div id="reco-product-similar">
+	<div class="swiper">
+		<div class="swiper-wrapper">
+		{%- for item in reco -%}
+    		<div class="swiper-slide" style="width: 285px;">
+			    <div class="brx-product" product-master-id="{{ item.item_id }}" product-master-title="{{ item.title }}" variant-id="{{ item.item_id }}" variant-title="{{ item.title }}" style="border: 1px solid #C9C9C9; border-radius: 30px; padding: 20px 15px; margin-bottom: 40px; width: 285px;">
+			        <div class="p" data-micro="product" data-testid="productItem" style="justify-content: space-between; margin: 0 auto; display: flex; flex-direction: column; height: 100%; position: relative;">
+			            <a href="{{ item.url }}" class="image" style="display: block; position: relative; text-align: center;">
+			                <img src="{{ '/user/documents/svg/female.svg' if item.gender == 'f' else ('/user/documents/svg/male.svg' if item.gender == 'm' else '/user/documents/svg/unisex_icon.svg') }}" class="gender_img_icon" style="position: absolute;" width="40">
+			                <img src="{{ item.image }}" fetchpriority="low" loading="lazy" style="height: 185px; margin-bottom: 18px;">
+			                <div style="left: 0; position: absolute; top: 0;">
+			                	<span class="brx-flag-action" style="display: {{ 'block' if item.price < item.original_price else 'none' }}; border-radius: 50px; text-transform: uppercase; font-weight: 400; font-size: 10px; background-color: #cd3e96; padding: 4px 10px; color: #fff;">Akce</span>
+			                </div>
+			                {%- if item.inspired_by_image and not item.ban -%}
+			                <div class="mini-original-parfume">
+			                    <img src="{{ item.inspired_by_image }}">
+			                </div>
+			                {%- endif -%}
+			            </a>
+			            <ul class="tags">
+			            	{%- if item.fragrance_type_reco -%}
+				                {%- for i in item.fragrance_type_reco.split(',') -%}
+					                {%- if loop.index < 4 -%}
+					                	<li class="tag">{{ i }}</li>
+					                {%- endif -%}
+				                {%- endfor -%}
+			                {%- endif -%}
+			            </ul>
+			            <div class="p-in">
+			                <div class="p-in-in" style="margin-top: 15px;">
+			                    <a href="{{ item.url }}" class="name" data-micro="url" style="height: 145px; border-bottom: 0; font-weight: 400; display: block; text-align: center;">
+			                        <span data-micro="name" data-testid="productCardName" style="color: {{ 'rgb(214, 52, 90)' if item.gender == 'f' else ('rgb(52, 97, 214)' if item.gender == 'm' else 'black') }}">
+			                            {{ item.title.split('Parf')[0] | truncate(30, end='...') }}
+			                            <span class="product-appendix category-appendix"> {{ item.appendix | truncate(30, end='...') }}
+			                            	{%- if not item.ban and item.inspired_by_brand and item.inspired_by_title -%}
+			                                <span class="changable">, zaměňována s:<br>
+			                                    <strong style="background-image: url(&quot;https://www.krasnevune.cz/user/documents/upload/{{ 'woman' if item.gender == 'f' else ('man' if item.gender == 'm' else 'uni') }}_bg_p.svg&quot;); height: auto; padding-top: 15px;">
+			                                        {{ item.inspired_by_brand }}
+			                                        <br>
+			                                        {{ item.inspired_by_title }}
+			                                    </strong>
+			                                </span>
+			                                {%- endif -%}
+			                            </span>
+			                        </span>
+			                    </a>
+			                    <!-- do not display favorite icon -->
+			                    <span class="favorite-icon" data-id="" style="cursor: pointer; margin-left: 10px; display: none;">
+			                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24px" width="24px">
+			                            <path stroke-width="2" stroke="#282828" fill="none" d="M2 9.1371C2 14 6.01943 16.5914 8.96173 18.9109C10 19.7294 11 20.5 12 20.5C13 20.5 14 19.7294 15.0383 18.9109C17.9806 16.5914 22 14 22 9.1371C22 4.27416 16.4998 0.825464 12 5.50063C7.50016 0.825464 2 4.27416 2 9.1371Z">
+			                            </path>
+			                        </svg>
+			                    </span>
+			                </div>
+			                <div class="p-bottom single-button" style="height: 70px;">
+			                    <div style="display: flex; flex-wrap: wrap; align-items: center; flex-direction: column;">
+			                        <div class="prices">
+			                            <div class="price price-final" data-testid="productCardPrice">
+			                            	<span class="brx-price-standard" style="display: {{ 'inline-block' if item.price < item.original_price else 'none' }}; padding-top: 4px;">
+			                            		<span style="font-weight: 500; color: #000; margin: 0; position: relative; top: 2px; margin-left: -40px !important; text-decoration: line-through;">{{ item.original_price | int }} Kč</span>
+			                            	</span>
+			                            	{%- if item.product_size_unit -%}
+			                                <span class="productVolume" style="font-size: 11px; font-weight: 800 !important; left: 15px; margin-top: 10px;">{{ item.size | int }} {{ item.product_size_unit }}</span>
+			                                {%- endif -%}
+			                                <strong style="visibility: visible; {{ 'color: #f44336;' if item.price < item.original_price else '' }} font-weight: 800 !important; position: absolute; right: 15px; font-size: 20px;">{{ item.price | int }} Kč</strong>
+			                                <span class="brx-price-save" style="display: {{ 'inline-block' if item.price < item.original_price else 'none' }}; font-size: 14px; position: relative; top: 2px; font-weight: 600 !important; {{ 'color: #f44336;' if item.price < item.original_price else '' }}">{{ item.discount_percentage | int }} %</span>
+			                            </div>
+			                        </div>
+			                        <div class="p-tools" style="display: flex; flex-direction: row-reverse; width: 100%; justify-content: space-between; margin-top: 32px; position: absolute;">
+			                        	<button style="margin-left:5px" class="btn btn-cart add-to-cart-button add-to-cart-category" data-action="buy" variant-id="{{ item.item_id }}">
+			                        		<span>Do košíku</span>
+			                        	</button>
+			                            <a href="{{ item.url }}" class="btn btn-primary" style="font-weight: 500; border-color: #259B63 !important; text-transform: capitalize;">Detail</a>
+			                        </div>
+			                    </div>
+			                </div>
+			            </div>
+{%- if item.sku_size_list | length > 0 and item.sku_size_list[0] != 'NA' -%}
+            <div class="widget-parameter-wrapper" data-parameter-name="Velikost" data-parameter-id="5" data-parameter-single="true" style="display: flex; justify-content: center; position: absolute; bottom: 78px;">
+			                <ul class="widget-parameter-list">
+			                    {%- for j in item.sku_size_list -%}
+			                    {%- if item.sku_stock_level_list[loop.index0] > 0 -%}
+			                    <li class="widget-parameter-value {{ 'active-variant' if loop.last }}" variant-id="{{ item.sku_list[loop.index0] }}" variant-image="{{ item.sku_image_list[loop.index0] }}" variant-price="{{ item.sku_price_list[loop.index0] | int }}" variant-original_price="{{ item.sku_original_price_list[loop.index0] }}" variant-title="{{ item.sku_title_list[loop.index0] }}" variant-stock_level="{{ item.sku_stock_level_list[loop.index0] }}" variant-url="{{ item.sku_url_list[loop.index0] }}" variant-size="{{ item.sku_size_list[loop.index0] }}" variant-discount_value="{{ item.sku_discount_value_list[loop.index0] }}" variant-discount_percentage="{{ item.sku_discount_percentage_list[loop.index0] }}">
+			                        <a style="cursor: pointer;" title="Velikost: {{ j }} {{ item.product_size_unit }}">{{ j }} {{ item.product_size_unit }}</a>
+			                    </li>
+			                    {%- endif -%}
+			                    {%- endfor -%}
+			                </ul>
+			            </div>
+			            {%- endif -%}
+			        </div>
+    			</div>
+    		</div>
+        	{%- endfor -%}		
+    	</div>
+    	<div class="swiper-button-next"></div>
+    	<div class="swiper-button-prev"></div>
+    </div>
+</div>

@@ -1,0 +1,48 @@
+.shell {
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-md);
+  padding-bottom: calc(var(--mantine-spacing-md) * 0.75);
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.heading {
+  flex: 1 1 320px;
+  min-width: 280px;
+  gap: calc(var(--mantine-spacing-xs) * 0.7);
+}
+
+.title {
+  letter-spacing: -0.02em;
+  color: var(--app-heading-primary);
+}
+
+.description {
+  color: var(--app-heading-secondary);
+  max-width: 70ch;
+}
+
+[data-theme='dark'] .title {
+  color: var(--app-heading-primary);
+}
+
+[data-theme='dark'] .description {
+  color: rgba(18, 24, 36, 0.86);
+}
+
+.actions {
+  flex: 1 1 220px;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 220px;
+}
+
+.body {
+  gap: calc(var(--mantine-spacing-xl) * 0.9);
+}

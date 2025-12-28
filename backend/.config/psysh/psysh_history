@@ -1,0 +1,3 @@
+use Illuminate\Http\Request;
+use Modules\Shoptet\Http\Controllers\PluginAdminController;
+ = app(PluginAdminController::class);

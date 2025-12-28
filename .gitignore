@@ -1,0 +1,8 @@
+/.DS_Store
+/.vscode
+/openapi (2).json
+/webhook.php
+/.env
+/tmp_exports/
+/backend/.composer/
+/backend/vendor/

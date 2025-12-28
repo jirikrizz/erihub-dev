@@ -1,0 +1,205 @@
+.table {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.wrapper {
+  border: 1px solid var(--app-border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--app-surface);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  gap: 8px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerCell {
+  position: relative;
+  user-select: none;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-secondary);
+  padding: 10px 12px;
+  vertical-align: middle;
+  background: var(--app-surface-frost);
+  border-bottom: 1px solid var(--app-border-strong);
+}
+
+:global([data-theme='dark']) .headerCell {
+  background: rgba(52, 62, 92, 0.58);
+  color: var(--app-text-secondary);
+  border-bottom: 1px solid rgba(134, 158, 224, 0.32);
+}
+
+.headerCellSorted {
+  color: var(--app-text-primary);
+}
+
+.body {
+  display: block;
+  position: relative;
+}
+
+.virtualRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.row {
+  height: 48px;
+  transition: background 120ms ease;
+}
+
+.row:hover {
+  background: var(--app-surface-faint);
+}
+
+.cell {
+  font-size: 0.95rem;
+  color: var(--app-text-primary);
+  padding: 10px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.rowClickable {
+  cursor: pointer;
+}
+
+.rowClickable:hover .cell {
+  background: var(--app-surface-faint);
+}
+
+.headerButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  margin: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: color 120ms ease, transform 120ms ease;
+}
+
+.headerButton:not([data-sortable]) {
+  cursor: default;
+}
+
+.headerButton[data-sortable]:hover,
+.headerButton[data-sortable]:focus-visible {
+  color: var(--app-text-primary);
+  transform: translateY(-1px);
+}
+
+.headerLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sortIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--app-text-tertiary);
+  opacity: 0.6;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.sortIndicator[data-active='true'] {
+  opacity: 1;
+  color: var(--app-text-primary);
+}
+
+.sortOrderBadge {
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(118, 148, 255, 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  color: var(--app-text-primary);
+  border: 1px solid rgba(118, 148, 255, 0.35);
+}
+
+:global([data-theme='dark']) .sortOrderBadge {
+  background: rgba(140, 160, 255, 0.28);
+  border: 1px solid rgba(140, 160, 255, 0.36);
+  color: var(--app-text-primary);
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 4px;
+  right: -6px;
+  width: 12px;
+  height: calc(100% - 8px);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease;
+}
+
+.resizeHandle::after {
+  content: '';
+  width: 2px;
+  height: 80%;
+  background: rgba(118, 148, 255, 0.28);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.resizeHandle:hover::after,
+.resizeHandle[data-resizing='true']::after {
+  opacity: 1;
+}
+
+.filterIcon {
+  margin-left: 4px;
+}
+
+.selectionHeader {
+  width: 34px;
+  min-width: 34px;
+  padding-left: 10px;
+  padding-right: 10px;
+  background: var(--app-surface-frost);
+  border-bottom: 1px solid var(--app-border-strong);
+}
+
+.selectionCell {
+  width: 34px;
+  min-width: 34px;
+  padding-left: 10px;
+  padding-right: 10px;
+  background: var(--app-surface);
+}

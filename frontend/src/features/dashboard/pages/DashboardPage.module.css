@@ -1,0 +1,159 @@
+.metricCard {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.9);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+[data-theme='dark'] .metricCard {
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+}
+
+.metricCard:hover {
+  border-color: var(--app-border-strong);
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-text-tertiary);
+}
+
+.metricValue {
+  font-size: 1.9rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--app-text-primary);
+}
+
+.metricDescription {
+  font-size: 0.78rem;
+  color: var(--app-text-secondary);
+  line-height: 1.4;
+}
+
+.sectionCard {
+  border-radius: 26px;
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+}
+
+[data-theme='dark'] .sectionCard {
+  background: var(--app-surface-card);
+  border: 1px solid rgba(136, 156, 210, 0.32);
+}
+
+.listCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+}
+
+.listRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--mantine-spacing-md);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(136, 152, 198, 0.18);
+}
+
+.listRow:last-of-type {
+  border-bottom: none;
+}
+
+.listRank {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  background: rgba(110, 148, 255, 0.16);
+  color: var(--app-text-primary);
+  font-size: 0.85rem;
+}
+
+[data-theme='dark'] .listRank {
+  background: rgba(120, 150, 255, 0.28);
+  color: rgba(235, 242, 255, 0.92);
+}
+
+.listValue {
+  font-weight: 600;
+  color: var(--app-text-primary);
+  font-size: 1rem;
+}
+
+.listMeta {
+  font-size: 0.78rem;
+  color: var(--app-text-tertiary);
+}
+
+.listHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tableHeading {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-tertiary);
+}
+
+.notesCard {
+  border-radius: 24px;
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+}
+
+[data-theme='dark'] .notesCard {
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+}
+
+.noteBody {
+  color: var(--app-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.noteMeta {
+  font-size: 0.75rem;
+  color: var(--app-text-tertiary);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--app-text-primary);
+}
+
+.sectionSubtitle {
+  font-size: 0.78rem;
+  color: var(--app-text-secondary);
+}
+
+.shopFilter {
+  min-width: 200px;
+}
+
+.topLocationsControls {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

@@ -1,0 +1,49 @@
+.page {
+  gap: calc(var(--mantine-spacing-xl) * 0.9);
+}
+
+.heading {
+  gap: 6px;
+  max-width: 62ch;
+}
+
+.title {
+  letter-spacing: -0.015em;
+  color: var(--app-heading-primary);
+}
+
+[data-theme='dark'] .title {
+  color: rgba(240, 244, 255, 0.94);
+}
+
+.description {
+  color: var(--app-text-secondary);
+}
+
+.sectionCard {
+  gap: var(--mantine-spacing-lg);
+}
+
+.subCard {
+  gap: var(--mantine-spacing-xs);
+}
+
+.table {
+  color: var(--app-text-primary);
+}
+
+.table thead th {
+  background: var(--app-table-header-bg);
+  color: var(--app-text-secondary);
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+[data-theme='dark'] .table thead th {
+  color: rgba(224, 234, 255, 0.78);
+}
+
+.rawInfoText {
+  color: var(--app-text-secondary);
+}

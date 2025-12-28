@@ -1,0 +1,23 @@
+.sectionCard {
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 14px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.sectionTitle {
+  font-weight: 700;
+  color: var(--app-text-primary, #1f2937);
+}
+
+.sectionSubtitle {
+  color: var(--app-text-secondary, #4b5563);
+  font-size: 0.95rem;
+  margin-top: 2px;
+}

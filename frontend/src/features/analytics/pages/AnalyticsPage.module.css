@@ -1,0 +1,192 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-xl) * 0.7);
+}
+
+.sectionCard {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.9);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-lg) * 0.6);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-lg);
+  flex-wrap: wrap;
+}
+
+.sectionHeaderTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionSubtitle {
+  font-size: 0.78rem;
+  color: var(--app-text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.filtersLayout {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-lg) * 0.55);
+}
+
+.filtersToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-sm);
+}
+
+.compareControl {
+  background: var(--app-surface-panel);
+  border: 1px solid var(--app-border-subtle);
+}
+
+.metricsGrid {
+  gap: var(--mantine-spacing-md);
+}
+
+.metricCard {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.8);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-xs) * 1.1);
+}
+
+.metricLabel {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-tertiary);
+  font-weight: 650;
+}
+
+.metricValue {
+  font-size: 1.68rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  color: var(--app-text-primary);
+}
+
+.tablesSection {
+  border-radius: 24px;
+  padding: calc(var(--mantine-spacing-lg) * 0.75);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-lg) * 0.55);
+}
+
+.tableScroll {
+  border-radius: 18px;
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-panel);
+  overflow: hidden;
+  color: var(--app-text-primary);
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.92rem;
+}
+
+.tableScroll .dataTable {
+  min-width: 960px;
+}
+
+.dataTable thead th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-tertiary);
+  background: var(--app-table-header-bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--app-border-strong);
+  padding-block: 12px;
+}
+
+.dataTable tbody td {
+  color: var(--app-text-primary);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--app-border-subtle);
+  background: transparent;
+}
+
+[data-theme='dark'] .dataTable tbody td {
+  color: rgba(240, 246, 255, 0.92);
+  border-bottom-color: rgba(150, 170, 220, 0.28);
+}
+
+.dataTable tbody tr:last-of-type td {
+  border-bottom: none;
+}
+
+.dataTable tbody tr {
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.dataTable tbody tr:hover {
+  background: rgba(110, 148, 255, 0.08);
+}
+
+.paginationRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.emptyCard {
+  border-radius: 20px;
+  padding: calc(var(--mantine-spacing-lg) * 0.7);
+  background: var(--app-surface-card);
+  border: 1px solid var(--app-border-subtle);
+}
+
+.locationsControls {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 62em) {
+  .sectionHeader {
+    align-items: stretch;
+  }
+
+  .filtersToolbar {
+    gap: var(--mantine-spacing-xs);
+  }
+}
+
+@media (max-width: 48em) {
+  .page {
+    gap: var(--mantine-spacing-xl);
+  }
+
+  .sectionCard {
+    padding: var(--mantine-spacing-lg);
+  }
+
+  .tablesSection {
+    padding: var(--mantine-spacing-lg);
+    border-radius: 22px;
+  }
+}

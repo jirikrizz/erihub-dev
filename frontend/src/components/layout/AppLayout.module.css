@@ -1,0 +1,482 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  color: var(--app-text-primary);
+  background: var(--app-surface-header);
+  border-bottom: 1px solid var(--app-border-strong);
+  padding-block: 8px;
+}
+
+.headerContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--mantine-spacing-md);
+}
+
+.headerMobile {
+  border-radius: 0 0 28px 28px;
+  margin: 0 6px 14px;
+  overflow: hidden;
+  padding-block: 18px;
+}
+
+.brandTitle {
+  letter-spacing: -0.02em;
+  color: var(--app-text-primary);
+}
+
+.brandSubline {
+  font-size: 0.76rem;
+  color: var(--app-text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.headerCompactGroup {
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.brandStack {
+  min-width: 0;
+}
+
+.headerActions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mantine-spacing-sm) * 0.9);
+}
+
+.sidebarToggle {
+  box-shadow: none;
+  transition: transform 160ms ease;
+}
+
+.sidebarToggle:hover {
+  transform: translateY(-1px);
+}
+
+.navbar {
+  height: 100%;
+  transition: width 160ms ease;
+}
+
+.navbarCollapsed .navHeader,
+.navbarCollapsed .navGroupHeaderText,
+.navbarCollapsed .navGroupBadge,
+.navbarCollapsed .helpCard,
+.navbarCollapsed .navHeaderTitle,
+.navbarCollapsed .navHeaderHint {
+  display: none;
+}
+
+.navbarCollapsed .navGroup {
+  padding: var(--mantine-spacing-sm);
+  align-items: center;
+}
+
+.navbarCollapsed .navGroupHeader {
+  justify-content: center;
+}
+
+.navbarCollapsed .navGroupToggle {
+  display: none;
+}
+
+.navbarCollapsed .navSubLinks {
+  padding-left: 0;
+}
+
+.navbarCollapsed .navLink {
+  justify-content: center;
+  padding-inline: var(--mantine-spacing-sm);
+}
+
+.navbarCollapsed .navLinkLabel {
+  display: none;
+}
+
+.navbarCollapsed .navGroup,
+.navbarCollapsed .helpCard {
+  box-shadow: none;
+  border-radius: 16px;
+}
+
+.brandBadge {
+  color: var(--app-text-inverse);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  background: rgba(110, 148, 255, 0.68);
+  border-radius: 999px;
+}
+
+.navHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-inline: calc(var(--mantine-spacing-sm) * 0.6);
+  padding-bottom: calc(var(--mantine-spacing-xs) * 0.6);
+}
+
+.navHeaderTitle {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--app-text-secondary);
+  font-weight: 720;
+}
+
+.navHeaderHint {
+  font-size: 0.74rem;
+  color: var(--app-text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.navGroup {
+  border-radius: 18px;
+  padding: calc(var(--mantine-spacing-md) * 0.52) calc(var(--mantine-spacing-md) * 0.55);
+  background: var(--app-surface-nav);
+  border: 1px solid var(--app-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mantine-spacing-sm) * 0.6);
+}
+
+.navGroupClosed {
+  gap: var(--mantine-spacing-sm);
+}
+
+.navGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-xs);
+}
+
+.navGroupHeaderText {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+}
+
+.navGroupTitle {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--app-text-tertiary);
+  font-weight: 650;
+}
+
+.navGroupBadge {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(116, 140, 198, 0.18);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--app-text-secondary);
+}
+
+.navGroupToggle {
+  color: var(--app-text-tertiary);
+}
+
+.navSubLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: calc(var(--mantine-spacing-sm) * 0.25);
+}
+
+.navLink {
+  border-radius: 16px;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  padding-block: calc(var(--mantine-spacing-xs) * 0.75);
+  padding-inline: calc(var(--mantine-spacing-sm) * 0.6);
+  border: 1px solid transparent;
+  transition: transform 160ms ease, background 160ms ease, border 160ms ease, color 160ms ease;
+  white-space: normal;
+}
+
+.navLink:hover {
+  transform: translateX(2px);
+  border-color: var(--app-border-subtle);
+  background: rgba(118, 148, 255, 0.14);
+}
+
+.navLink[data-active] {
+  color: var(--app-text-primary);
+  border-color: transparent;
+  background: rgba(126, 156, 255, 0.26);
+}
+
+.navLinkLabel {
+  font-size: var(--mantine-font-size-sm);
+  letter-spacing: -0.01em;
+  white-space: normal;
+}
+
+.navLink[data-active] .navLinkLabel {
+  color: inherit;
+}
+
+.navLinkNested {
+  padding-inline: calc(var(--mantine-spacing-sm) * 0.55);
+  border-radius: 14px;
+}
+
+.navLinkNested[data-active] {
+  background: rgba(118, 148, 255, 0.18);
+}
+
+.helpCard {
+  border-radius: 20px;
+  padding: calc(var(--mantine-spacing-lg) * 0.7);
+  background: var(--app-surface-nav);
+  border: 1px solid var(--app-border-subtle);
+}
+
+.helpCardTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+.helpCardCopy {
+  font-size: 0.78rem;
+  color: var(--app-text-tertiary);
+  line-height: 1.45;
+}
+
+.userIconButton {
+  transition: transform 160ms ease;
+}
+
+.userIconButton:hover {
+  transform: translateY(-1px);
+}
+
+.userAvatar {
+  background: var(--app-surface-elevated);
+  color: var(--mantine-color-ocean-6);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: -0.01em;
+  border: 1px solid var(--app-border-subtle);
+}
+
+.userMenuTrigger {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(118, 140, 190, 0.28);
+  transition: transform 160ms ease, background 160ms ease, border 160ms ease;
+}
+
+[data-theme='dark'] .userMenuTrigger {
+  background: rgba(26, 32, 48, 0.92);
+  border-color: rgba(160, 182, 238, 0.24);
+}
+
+.userMenuTrigger:hover {
+  transform: translateY(-1px);
+}
+
+.userMenuMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.userMenuName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text-primary);
+  line-height: 1.1;
+}
+
+.userMenuSummary {
+  font-size: 0.72rem;
+  color: var(--app-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.userMenuCaret {
+  color: var(--app-text-secondary);
+  flex-shrink: 0;
+}
+
+.userMenuAvatar {
+  background: var(--app-surface-elevated);
+  color: var(--mantine-color-ocean-6);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: -0.01em;
+  border: 1px solid var(--app-border-subtle);
+}
+
+.mobileFooter {
+  background: var(--app-mobile-footer-bg);
+  border-top: 1px solid var(--app-border-subtle);
+  padding-block: 8px;
+}
+
+.mobileFooterScroll {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mantine-spacing-md) * 0.8);
+  padding: 4px calc(var(--mantine-spacing-md) * 0.9);
+  height: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobileFooterScroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.mobileFooterScroll::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar);
+  border-radius: 999px;
+}
+
+.mobileNavButton {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  color: var(--app-text-tertiary);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: -0.01em;
+  background: var(--app-surface-panel);
+  border: 1px solid var(--app-border-subtle);
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease, opacity 160ms ease;
+  min-width: 88px;
+  scroll-snap-align: center;
+}
+
+.mobileNavButton span {
+  margin-top: 2px;
+  opacity: 0.78;
+  transition: opacity 160ms ease;
+  white-space: nowrap;
+}
+
+.mobileNavButton svg {
+  transition: transform 160ms ease;
+}
+
+.mobileNavButton[data-active],
+.mobileNavButton:hover {
+  background: var(--app-gradient-accent);
+  color: var(--app-text-inverse);
+  transform: translateY(-2px);
+}
+
+.mobileNavButton[data-active] span,
+.mobileNavButton:hover span {
+  opacity: 1;
+}
+
+.mobileNavButton[data-active] svg,
+.mobileNavButton:hover svg {
+  transform: translateY(-1px) scale(1.04);
+}
+
+.mainArea {
+  position: relative;
+  z-index: 0;
+}
+
+.mainScroller {
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mainContent {
+  position: relative;
+  max-width: 1520px;
+  margin: 0 auto;
+  width: 100%;
+  padding: calc(var(--mantine-spacing-lg) * 0.65) var(--mantine-spacing-xl)
+    calc(var(--mantine-spacing-xl) * 1.05);
+}
+
+.notificationDropdown {
+  margin-top: -6px;
+  padding-top: 4px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 18px;
+  background: var(--app-surface-elevated);
+}
+
+.notificationList {
+  padding-top: calc(var(--mantine-spacing-xs) * 0.5);
+}
+
+.notificationItem {
+  border-radius: 14px;
+  border: 1px solid var(--app-border-subtle);
+  background: var(--app-surface-panel);
+}
+
+@media (max-width: 62em) {
+  .header {
+    padding-block: 10px;
+  }
+
+  .navIntro,
+  .navGroup,
+  .helpCard {
+    padding: calc(var(--mantine-spacing-md) * 0.9);
+  }
+
+  .mainContent {
+    padding: calc(var(--mantine-spacing-lg) * 0.6) var(--mantine-spacing-lg)
+      calc(var(--mantine-spacing-xl) * 1.05);
+  }
+
+  .mobileFooterScroll {
+    gap: var(--mantine-spacing-sm);
+    padding-inline: var(--mantine-spacing-md);
+  }
+
+  .mobileNavButton {
+    min-width: 76px;
+  }
+}
+
+@media (max-width: 48em) {
+  .header {
+    border-radius: 0 0 24px 24px;
+  }
+
+  .mainContent {
+    padding: calc(var(--mantine-spacing-lg) * 0.65) var(--mantine-spacing-md)
+      calc(var(--mantine-spacing-xl) * 1.45);
+  }
+}
