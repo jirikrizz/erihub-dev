@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('failed_snapshots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('webhook_job_id')->constrained('shoptet_webhook_jobs')->cascadeOnDelete();
+            $table->uuid('webhook_job_id');
+            $table->foreign('webhook_job_id')->references('id')->on('shoptet_webhook_jobs')->cascadeOnDelete();
             $table->foreignId('shop_id')->constrained('shoptet_shops')->cascadeOnDelete();
             $table->string('endpoint')->nullable();
             $table->string('status')->default('pending'); // pending, retrying, resolved
