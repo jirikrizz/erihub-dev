@@ -64,6 +64,7 @@ const formatDateTime = (value?: string | null): string => {
 
 type ProductsListPreference = {
   page?: number;
+  per_page?: number;
   search?: string;
   translation_status?: string | null;
   source_shop_id?: number | null;
@@ -103,6 +104,8 @@ const DEFAULT_PRODUCT_COLUMNS: Record<ProductColumn, boolean> = {
 export const ProductsPage = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  // @ts-expect-error - setPerPage will be used for per_page UI control
+  const [perPage, setPerPage] = useState(25);
   const [translationStatus, setTranslationStatus] = useState<string | null>(null);
   const [sort, setSort] = useState<string>(DEFAULT_SORT);
   const [search, setSearch] = useState('');
@@ -296,6 +299,7 @@ export const ProductsPage = () => {
   const params = useMemo(
     () => ({
       page,
+      per_page: perPage,
       search: debouncedSearch || undefined,
       translation_status: translationStatus || undefined,
       shop_id: sourceShopId ?? undefined,
@@ -303,7 +307,7 @@ export const ProductsPage = () => {
       sort_by: sortByField,
       sort_direction: sortDir,
     }),
-    [page, debouncedSearch, sortByField, sortDir, translationStatus, sourceShopId, targetShopId]
+    [page, perPage, debouncedSearch, sortByField, sortDir, translationStatus, sourceShopId, targetShopId]
   );
 
   const { data, isLoading } = useProducts(params);

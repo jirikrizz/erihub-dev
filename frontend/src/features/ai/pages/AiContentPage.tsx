@@ -261,9 +261,10 @@ export const AiContentPage = () => {
   const uploadMaskMutation = useUploadAiImage();
   const [historyType, setHistoryType] = useState<'all' | 'text' | 'image' | 'video'>('all');
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage] = useState(10);
   const historyFilters = useMemo(
-    () => ({ type: historyType === 'all' ? undefined : historyType, page: historyPage }),
-    [historyType, historyPage]
+    () => ({ type: historyType === 'all' ? undefined : historyType, page: historyPage, per_page: historyPerPage }),
+    [historyType, historyPage, historyPerPage]
   );
   const requiresReferenceImages = useMemo(
     () => imageProvider === 'openai' && ['product_image', 'marketing_visual'].includes(imageScenario),

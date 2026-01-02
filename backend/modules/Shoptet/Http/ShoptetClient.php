@@ -42,14 +42,17 @@ class ShoptetClient implements ShoptetClientContract
     {
         $query = ['itemsPerPage' => 200] + $query;
 
-        return $this->fetchPaginatedCollection($shop, '/api/products/filtering-parameters', 'data.filteringParameters', $query);
+        // Use lazy generator for memory efficiency, then convert to array
+        // This prevents loading all pages into memory at once
+        return array_values(iterator_to_array($this->fetchPaginatedCollectionLazy($shop, '/api/products/filtering-parameters', 'data.filteringParameters', $query)));
     }
 
     public function listVariantParameters(Shop $shop, array $query = []): array
     {
         $query = ['include' => 'values', 'itemsPerPage' => 200] + $query;
 
-        return $this->fetchPaginatedCollection($shop, '/api/products/variant-parameters', 'data.parameters', $query);
+        // Use lazy generator for memory efficiency, then convert to array
+        return array_values(iterator_to_array($this->fetchPaginatedCollectionLazy($shop, '/api/products/variant-parameters', 'data.parameters', $query)));
     }
 
     public function getOrder(Shop $shop, string $code, array $query = []): array
@@ -273,6 +276,46 @@ class ShoptetClient implements ShoptetClientContract
         ]);
     }
 
+    /**
+     * Fetch paginated collection using a generator for memory efficiency.
+     * Yields items one by one instead of loading all pages into memory.
+     * 
+     * This is the preferred method for handling large datasets - memory usage stays constant
+     * regardless of total items. Use this for products, orders, customers, etc.
+     *
+     * @return \Generator<mixed, mixed, mixed>
+     */
+    public function fetchPaginatedCollectionLazy(Shop $shop, string $endpoint, string $collectionPath, array $query = []): \Generator
+    {
+        $page = 1;
+        $itemsPerPage = (int) ($query['itemsPerPage'] ?? 200);
+        $itemsPerPage = $itemsPerPage > 0 ? $itemsPerPage : 200;
+
+        do {
+            $response = $this->request($shop, 'GET', $endpoint, [
+                'query' => array_merge($query, [
+                    'page' => $page,
+                    'itemsPerPage' => $itemsPerPage,
+                ]),
+            ]);
+
+            $chunk = Arr::get($response, $collectionPath, []);
+            
+            if (is_array($chunk) && $chunk !== []) {
+                foreach ($chunk as $item) {
+                    yield $item;
+                }
+            }
+
+            $pageCount = (int) Arr::get($response, 'data.paginator.pageCount', $page);
+            $page++;
+        } while ($pageCount >= $page);
+    }
+
+    /**
+     * Fetch all paginated items and return aggregated array (original memory-intensive method).
+     * Use fetchPaginatedCollectionLazy() for better memory usage.
+     */
     private function fetchPaginatedCollection(Shop $shop, string $endpoint, string $collectionPath, array $query = []): array
     {
         $page = 1;

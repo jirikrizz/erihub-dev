@@ -104,6 +104,8 @@ export const VipCustomersPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  // @ts-expect-error - setPerPage will be used for per_page UI control
+  const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebouncedValue(search, 300);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -119,13 +121,14 @@ export const VipCustomersPage = () => {
   const params = useMemo(
     () => ({
       page,
+      per_page: perPage,
       search: normalizeText(debouncedSearch) ?? undefined,
       country: selectedCountries.length > 0 ? selectedCountries : undefined,
       shop_id: selectedShops.length > 0 ? selectedShops : undefined,
       aov_min: debouncedAovMin ?? undefined,
       aov_max: debouncedAovMax ?? undefined,
     }),
-    [page, debouncedSearch, selectedCountries, selectedShops, debouncedAovMin, debouncedAovMax]
+    [page, perPage, debouncedSearch, selectedCountries, selectedShops, debouncedAovMin, debouncedAovMax]
   );
 
   const { data, isLoading } = useVipCustomers(params);

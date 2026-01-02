@@ -31,15 +31,18 @@ const statusBadgeColor = (status: string) => {
 export const ProductWidgetsPage = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  // @ts-expect-error - setPerPage will be used for per_page UI control
+  const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebouncedValue(search.trim(), 250);
 
   const params = useMemo(
     () => ({
       page,
+      per_page: perPage,
       search: debouncedSearch !== '' ? debouncedSearch : undefined,
     }),
-    [page, debouncedSearch]
+    [page, perPage, debouncedSearch]
   );
 
   const widgetsQuery = useProductWidgets(params);

@@ -80,6 +80,7 @@ const uniqueStringArray = (input: unknown): string[] => {
 
 type OrdersListPreference = {
   page?: number;
+  perPage?: number;
   statuses?: string[];
   search?: string;
   shop_id?: number | null;
@@ -120,6 +121,7 @@ export const OrdersPage = () => {
   const [filtersOpened, { toggle: toggleFilters, open: openFilters, close: closeFilters }] = useDisclosure(true);
 
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebouncedValue(search, 300);
@@ -163,6 +165,7 @@ export const OrdersPage = () => {
   const params = useMemo(
     () => ({
       page,
+      per_page: perPage,
       shop_id: shopId ?? undefined,
       status: statuses.length > 0 ? statuses : undefined,
       search: debouncedSearch || undefined,
@@ -176,6 +179,7 @@ export const OrdersPage = () => {
     }),
     [
       page,
+      perPage,
       shopId,
       statuses,
       debouncedSearch,
@@ -212,6 +216,7 @@ export const OrdersPage = () => {
     const sortByValue = preference.sort_by ?? 'ordered_at';
     const sortDirValue = preference.sort_dir ?? 'desc';
     const providersEmpty = !preference.providers || preference.providers.length === 0;
+    const perPageValue = preference.perPage ?? 25;
 
     return (
       (preference.page ?? 1) === 1 &&
@@ -225,7 +230,8 @@ export const OrdersPage = () => {
       shopUnset &&
       sortByValue === 'ordered_at' &&
       sortDirValue === 'desc' &&
-      providersEmpty
+      providersEmpty &&
+      perPageValue === 25
     );
   }, []);
 
@@ -243,6 +249,10 @@ export const OrdersPage = () => {
     }
 
     const nextPage = preference.page && preference.page > 0 ? Math.floor(preference.page) : 1;
+    const nextPerPage =
+      typeof preference.perPage === 'number' && preference.perPage >= 10 && preference.perPage <= 100
+        ? preference.perPage
+        : 25;
     const nextStatuses = uniqueStringArray(preference.statuses ?? []);
     const nextSearch = typeof preference.search === 'string' ? preference.search : '';
     const nextRange = typeof preference.range === 'string' ? preference.range : '30d';
@@ -265,6 +275,7 @@ export const OrdersPage = () => {
     }
 
     setPage(nextPage);
+    setPerPage(nextPerPage);
     setStatuses(nextStatuses);
     setSearch(nextSearch);
     setRange(nextRange);
@@ -280,6 +291,7 @@ export const OrdersPage = () => {
 
     const trackingPayload: OrdersListPreference = {
       page: nextPage,
+      perPage: nextPerPage,
       statuses: nextStatuses,
       search: normalizeText(nextSearch),
       shop_id: nextShopId,
@@ -308,6 +320,7 @@ export const OrdersPage = () => {
   const buildPreferencePayload = useCallback((): OrdersListPreference => {
     return {
       page,
+      perPage,
       statuses: statuses.length > 0 ? [...statuses] : [],
       search: normalizeText(search),
       shop_id: shopId ?? null,
@@ -325,6 +338,7 @@ export const OrdersPage = () => {
     dateFrom,
     dateTo,
     page,
+    perPage,
     product,
     range,
     search,
