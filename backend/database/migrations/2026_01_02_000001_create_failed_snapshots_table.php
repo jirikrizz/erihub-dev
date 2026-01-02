@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('webhook_job_id');
             $table->foreign('webhook_job_id')->references('id')->on('shoptet_webhook_jobs')->cascadeOnDelete();
-            $table->foreignId('shop_id')->constrained('shoptet_shops')->cascadeOnDelete();
+            $table->foreignId('shop_id')->constrained('shops')->cascadeOnDelete();
             $table->string('endpoint')->nullable();
             $table->string('status')->default('pending'); // pending, retrying, resolved
             $table->integer('retry_count')->default(0);
