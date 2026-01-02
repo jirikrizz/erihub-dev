@@ -23,6 +23,13 @@ class Kernel extends ConsoleKernel
             ->onFailure(function () {
                 \Illuminate\Support\Facades\Log::error('Database backup failed');
             });
+
+        // Retry failed snapshots - every hour
+        $schedule->job(new \Modules\Shoptet\Jobs\RetryFailedSnapshotsJob)
+            ->hourly()
+            ->name('retry-failed-snapshots')
+            ->withoutOverlapping(60)
+            ->onQueue('snapshots');
     }
 
     protected function commands(): void
