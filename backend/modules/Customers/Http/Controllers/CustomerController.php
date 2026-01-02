@@ -155,7 +155,10 @@ class CustomerController extends Controller
         $baseQuery = $this->buildBaseQuery($request);
         $filtersBaseQuery = clone $baseQuery;
 
-        $query = $this->buildMetricsQuery($baseQuery, $request, true);
+        // Computing order providers for every row is expensive; make it opt-in to speed up listing.
+        $includeOrderProviders = $request->boolean('include_order_providers', false);
+
+        $query = $this->buildMetricsQuery($baseQuery, $request, true, $includeOrderProviders);
 
         $sortBy = $request->string('sort_by')->toString() ?: 'last_order_at';
         $sortDir = strtolower($request->string('sort_dir')->toString()) === 'desc' ? 'desc' : 'asc';
@@ -477,7 +480,12 @@ class CustomerController extends Controller
         );
     }
 
-    private function buildMetricsQuery(Builder $baseQuery, Request $request, bool $includeSelects = true): Builder
+    private function buildMetricsQuery(
+        Builder $baseQuery,
+        Request $request,
+        bool $includeSelects = true,
+        bool $includeOrderProviders = false
+    ): Builder
     {
         $completedStatuses = $this->orderStatusResolver->completed();
         $problemStatuses = $this->orderStatusResolver->excludedFromCompleted();
@@ -505,8 +513,11 @@ class CustomerController extends Controller
                 ->addSelect(DB::raw('metrics.last_order_at AS last_order_at'))
                 ->addSelect(DB::raw("{$problemSelect} AS problem_orders"))
                 ->addSelect(DB::raw("{$completedSelect} AS completed_orders"))
-                ->addSelect(DB::raw('shops.provider AS shop_provider'))
-                ->addSelect(DB::raw("COALESCE((SELECT json_agg(DISTINCT order_shops.provider) FROM orders JOIN shops AS order_shops ON order_shops.id = orders.shop_id WHERE orders.customer_guid::text = customers.guid::text), '[]'::json) AS order_providers"));
+                ->addSelect(DB::raw('shops.provider AS shop_provider'));
+
+            if ($includeOrderProviders) {
+                $query->addSelect(DB::raw("COALESCE((SELECT json_agg(DISTINCT order_shops.provider) FROM orders JOIN shops AS order_shops ON order_shops.id = orders.shop_id WHERE orders.customer_guid::text = customers.guid::text), '[]'::json) AS order_providers"));
+            }
         }
 
         $query->leftJoin('customer_metrics as metrics', 'metrics.customer_guid', '=', 'customers.guid')
