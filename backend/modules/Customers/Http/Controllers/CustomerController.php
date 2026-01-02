@@ -503,7 +503,17 @@ class CustomerController extends Controller
         $query = (clone $baseQuery);
 
         if ($includeSelects) {
-            $query->select('customers.*')
+            $query->select([
+                'customers.id',
+                'customers.guid',
+                'customers.full_name',
+                'customers.email',
+                'customers.phone',
+                'customers.shop_id',
+                'customers.customer_group',
+                'customers.created_at_remote',
+                'customers.data',
+            ])
                 ->addSelect(DB::raw('COALESCE(metrics.orders_count, 0) AS orders_count'))
                 ->addSelect(DB::raw('COALESCE(metrics.total_spent, 0) AS total_spent'))
                 ->addSelect(DB::raw('COALESCE(metrics.total_spent_base, 0) AS total_spent_base'))
