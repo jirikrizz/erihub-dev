@@ -104,8 +104,7 @@ const DEFAULT_PRODUCT_COLUMNS: Record<ProductColumn, boolean> = {
 export const ProductsPage = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  // @ts-expect-error - setPerPage will be used for per_page UI control
-  const [perPage, setPerPage] = useState(25);
+  const [perPage] = useState(25);  // Will be used for per_page UI control in Phase 3
   const [translationStatus, setTranslationStatus] = useState<string | null>(null);
   const [sort, setSort] = useState<string>(DEFAULT_SORT);
   const [search, setSearch] = useState('');
