@@ -102,6 +102,12 @@ class MicrositeProductResolver
                 ?? Arr::get($variantData, 'url');
             $imageUrl = $this->resolveVariantImage($overlayData, $variantData, $productBasePayload);
 
+            $actionPrice = null;
+            if (is_array($overlayData) && isset($overlayData['actionPrice'])) {
+                // Use resolveActionPrice which validates fromDate/toDate range
+                $actionPrice = $this->resolveActionPrice($overlayData['actionPrice']);
+            }
+
             return array_filter([
                 'id' => $productVariant->id,
                 'code' => $productVariant->code,
@@ -112,6 +118,7 @@ class MicrositeProductResolver
                 'url' => $detailUrl,
                 'image_url' => $imageUrl,
                 'stock_level' => $overlay->stock ?? $productVariant->stock,
+                'action_price' => $actionPrice,
             ], static fn ($value) => $value !== null);
         })->values()->toArray();
 

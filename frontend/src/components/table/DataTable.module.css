@@ -54,6 +54,7 @@
 .body {
   display: block;
   position: relative;
+  width: 100%;
 }
 
 .virtualRow {
@@ -67,11 +68,6 @@
 
 .row {
   height: 48px;
-  transition: background 120ms ease;
-}
-
-.row:hover {
-  background: var(--app-surface-faint);
 }
 
 .cell {
@@ -80,20 +76,19 @@
   padding: 10px 12px;
   vertical-align: middle;
   border-bottom: 1px solid var(--app-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rowClickable {
   cursor: pointer;
 }
 
-.rowClickable:hover .cell {
-  background: var(--app-surface-faint);
-}
-
 .headerButton {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   background: none;
   border: none;
@@ -102,7 +97,6 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
-  transition: color 120ms ease, transform 120ms ease;
 }
 
 .headerButton:not([data-sortable]) {
@@ -128,7 +122,6 @@
   font-weight: 600;
   color: var(--app-text-tertiary);
   opacity: 0.6;
-  transition: opacity 120ms ease, color 120ms ease;
 }
 
 .sortIndicator[data-active='true'] {
@@ -165,7 +158,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 120ms ease;
 }
 
 .resizeHandle::after {
@@ -175,7 +167,6 @@
   background: rgba(118, 148, 255, 0.28);
   border-radius: 999px;
   opacity: 0;
-  transition: opacity 120ms ease;
 }
 
 .resizeHandle:hover::after,
@@ -199,7 +190,7 @@
 .selectionCell {
   width: 34px;
   min-width: 34px;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
   background: var(--app-surface);
 }

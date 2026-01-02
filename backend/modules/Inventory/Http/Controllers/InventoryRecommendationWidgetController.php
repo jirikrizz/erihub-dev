@@ -18,6 +18,7 @@ use Modules\Pim\Models\ProductVariant;
 use Modules\Pim\Models\ProductWidget;
 use Modules\Pim\Models\ProductWidgetItem;
 use Modules\Pim\Services\ProductWidgetRenderer;
+use Carbon\CarbonImmutable;
 
 class InventoryRecommendationWidgetController extends Controller
 {
@@ -345,6 +346,13 @@ JS;
             $variantModel = ProductVariant::query()
                 ->with([
                     'product',
+                    'product.shop',
+                    'overlays' => static function ($query) use ($shopId): void {
+                        if ($shopId) {
+                            $query->where('shop_id', $shopId);
+                        }
+                    },
+                    'overlays.shop',
                     'product.overlays' => static function ($query) use ($shopId): void {
                         if ($shopId) {
                             $query->where('shop_id', $shopId);
@@ -607,6 +615,42 @@ JS;
 
         $context = InventoryVariantContext::build($variant);
         $productPayload = is_array($variant->product?->base_payload) ? $variant->product->base_payload : [];
+        
+        // Extract action_price from variant overlays if not already in selectedOption.
+        if (! isset($selectedOption['action_price'])) {
+            $variantOverlays = $variant->relationLoaded('overlays')
+                ? ($variant->overlays ?? collect())
+                : $variant->overlays()->with('shop')->get();
+            $overlayMaster = $variantOverlays->first(fn ($record) => $record->relationLoaded('shop') && $record->shop?->is_master);
+            $overlayShop = $shopId ? $variantOverlays->firstWhere('shop_id', $shopId) : null;
+            $overlayToCheck = $overlayMaster ?? $overlayShop;
+
+            if ($overlayToCheck && is_array($overlayToCheck->data)) {
+                $actionPriceData = Arr::get($overlayToCheck->data, 'actionPrice');
+                if (is_array($actionPriceData) && isset($actionPriceData['price'])) {
+                    try {
+                        $now = CarbonImmutable::now()->startOfDay();
+
+                        $from = null;
+                        if (! empty($actionPriceData['fromDate']) && is_string($actionPriceData['fromDate'])) {
+                            $from = CarbonImmutable::parse($actionPriceData['fromDate'])->startOfDay();
+                        }
+
+                        $to = null;
+                        if (! empty($actionPriceData['toDate']) && is_string($actionPriceData['toDate'])) {
+                            $to = CarbonImmutable::parse($actionPriceData['toDate'])->endOfDay();
+                        }
+
+                        if (($from === null || $now->gte($from)) && ($to === null || $now->lte($to))) {
+                            $selectedOption['action_price'] = (float) $actionPriceData['price'];
+                        }
+                    } catch (\Throwable $e) {
+                        // If date parsing fails, do not apply action price to avoid accidental display
+                    }
+                }
+            }
+        }
+        
         $detailUrl = $this->normalizeUrl($selectedOption['url'] ?? null)
             ?? $this->normalizeUrl(Arr::get($recommendation, 'variant.data.detailUrl'))
             ?? $this->normalizeUrl(Arr::get($recommendation, 'variant.data.url'))
@@ -623,8 +667,10 @@ JS;
         $imageUrl = $this->resolveImageUrl($selectedOption, $snapshot);
         $miniImageUrl = $this->resolveMiniImageUrl($selectedOption, $snapshot, $recommendation, $variant);
 
-        $priceCurrent = $this->formatPriceValue($selectedOption['price'] ?? Arr::get($snapshot, 'price'));
-        $priceOriginal = $this->formatPriceValue(
+        $pricing = $this->resolveCzPricing($selectedOption, $variant, $shopId);
+
+        $priceCurrent = $pricing['effective_price'] ?? $this->formatPriceValue($selectedOption['price'] ?? Arr::get($snapshot, 'price'));
+        $priceOriginal = $pricing['base_price'] ?? $this->formatPriceValue(
             $selectedOption['original_price']
                 ?? Arr::get($recommendation, 'variant.data.price.original')
         );
@@ -650,7 +696,99 @@ JS;
                 ?? Arr::get($recommendation, 'variant.data.inspiredByTitle')
         );
 
-        $inspiration = $this->extractInspiration($context, $snapshot, $recommendation);
+        // Prefer explicit stored inspiration fields from product payload / snapshot / recommendation
+        $productBase = is_array($variant->product?->base_payload) ? $variant->product->base_payload : (is_array(Arr::get($snapshot, 'base_payload')) ? Arr::get($snapshot, 'base_payload') : []);
+        $storedBrandRaw = Arr::get($productBase, 'metadata.inspired_by_brand')
+            ?? Arr::get($productBase, 'inspired_by_brand')
+            ?? Arr::get($snapshot, 'metadata.inspired_by_brand')
+            ?? Arr::get($snapshot, 'metadata.original_brand')
+            ?? Arr::get($recommendation, 'variant.data.inspired_by_brand')
+            ?? Arr::get($recommendation, 'variant.data.original_brand')
+            ?? null;
+        $storedTitleRaw = Arr::get($productBase, 'metadata.inspired_by_title')
+            ?? Arr::get($productBase, 'inspired_by_title')
+            ?? Arr::get($snapshot, 'metadata.inspired_by_title')
+            ?? Arr::get($snapshot, 'metadata.original_name')
+            ?? Arr::get($recommendation, 'variant.data.inspired_by_title')
+            ?? Arr::get($recommendation, 'variant.data.original_name')
+            ?? null;
+
+        $storedBrand = $this->normalizeString($storedBrandRaw);
+        $storedTitle = $this->normalizeString($storedTitleRaw);
+
+        // If product base has explicit descriptiveParameters (full label) and filteringParameters (brand),
+        // prefer using the brand from filteringParameters and the descriptiveParameters value as full title,
+        // stripping the brand part to produce the `inspired_by_title` we want (e.g. "Baccarat Rouge 540").
+        $descriptiveFull = null;
+        $brandFilterName = null;
+        $productBaseArr = is_array($productBase) ? $productBase : [];
+        $descriptiveParams = Arr::get($productBaseArr, 'descriptiveParameters', []);
+        if (is_array($descriptiveParams)) {
+            foreach ($descriptiveParams as $p) {
+                if (! is_array($p)) {
+                    continue;
+                }
+                $pname = isset($p['name']) ? mb_strtolower((string) $p['name'], 'UTF-8') : '';
+                if ($pname === '' || (! str_contains($pname, 'inspiro') && ! str_contains($pname, 'podob'))) {
+                    continue;
+                }
+                $val = $p['value'] ?? $p['values'] ?? null;
+                if (is_string($val) && trim($val) !== '') {
+                    $descriptiveFull = trim($val);
+                    break;
+                }
+            }
+        }
+
+        $filteringParams = Arr::get($productBaseArr, 'filteringParameters', []);
+        if (is_array($filteringParams)) {
+            foreach ($filteringParams as $filter) {
+                if (! is_array($filter)) {
+                    continue;
+                }
+                $fcode = isset($filter['code']) ? mb_strtolower((string) $filter['code'], 'UTF-8') : '';
+                $fname = isset($filter['name']) ? mb_strtolower((string) $filter['name'], 'UTF-8') : '';
+                if (! str_contains($fcode, 'znacka') && ! str_contains($fname, 'znack')) {
+                    continue;
+                }
+                foreach ($filter['values'] ?? [] as $val) {
+                    if (is_array($val) && isset($val['name'])) {
+                        $brandFilterName = trim((string) $val['name']);
+                        break 2;
+                    } elseif (is_string($val) && trim($val) !== '') {
+                        $brandFilterName = trim($val);
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        if ($brandFilterName !== null || $storedBrand !== null || $storedTitle !== null) {
+            // If we have both descriptive full label and brand filter, split them.
+            if ($descriptiveFull !== null && $brandFilterName !== null) {
+                $brandFormatted = $this->formatBrandName($brandFilterName);
+                $titleRecovered = $this->removeBrandFromTitle($descriptiveFull, $brandFormatted);
+                if ($titleRecovered === null) {
+                    // Fallback: remove raw brandFilterName (case-insensitive) from start
+                    $titleRecovered = preg_replace('/^'.preg_quote($brandFilterName,'/').'\s*/iu', '', $descriptiveFull);
+                    $titleRecovered = trim((string) $titleRecovered);
+                }
+                $inspiration = [
+                    'brand' => $brandFormatted,
+                    'title' => $titleRecovered ?: null,
+                ];
+                $skipInspirationHeuristics = true;
+            } else {
+                $inspiration = [
+                    'brand' => $storedBrand ? $this->formatBrandName($storedBrand) : null,
+                    'title' => $storedTitle ?: null,
+                ];
+                $skipInspirationHeuristics = true;
+            }
+        } else {
+            $inspiration = $this->extractInspiration($context, $snapshot, $recommendation);
+            $skipInspirationHeuristics = false;
+        }
         if (! $inspiration['title'] || ! $miniImageUrl) {
             $originalInfo = $this->fetchOriginalInfo($variantCode);
             if ($originalInfo) {
@@ -668,6 +806,127 @@ JS;
         if ($explicitTitle) {
             $inspiration['title'] = $explicitTitle;
         }
+            if (!($skipInspirationHeuristics ?? false)) {
+            // If title starts with a multi-word capitalized brand (e.g. "Tom Ford Rose Prick"), prefer that brand.
+            try {
+                $inspTitle = $inspiration['title'] ?? null;
+                // Assemble fallback title sources so we can detect brand even if the current inspiration title is short/truncated.
+                $fallbackTitleSources = [
+                    $inspTitle,
+                    Arr::get($recommendation, 'variant.data.original_name'),
+                    Arr::get($recommendation, 'variant.data.originalName'),
+                    Arr::get($recommendation, 'variant.data.inspired_by_title'),
+                    Arr::get($recommendation, 'variant.data.inspiredByTitle'),
+                    Arr::get($snapshot, 'metadata.original_name'),
+                    Arr::get($snapshot, 'metadata.inspired_by'),
+                    Arr::get($snapshot, 'metadata.inspired_by_title'),
+                ];
+
+                $searchTitle = null;
+                foreach ($fallbackTitleSources as $cand) {
+                    if (! is_string($cand)) {
+                        continue;
+                    }
+                    $trimmed = trim($cand);
+                    if ($trimmed === '') {
+                        continue;
+                    }
+                    if (mb_strlen($trimmed, 'UTF-8') >= 4) {
+                        $searchTitle = $trimmed;
+                        break;
+                    }
+                }
+
+                // Use original inspiration title as last resort.
+                if ($searchTitle === null && is_string($inspTitle) && trim($inspTitle) !== '') {
+                    $searchTitle = trim($inspTitle);
+                }
+
+                if (is_string($searchTitle)) {
+                    // Prefer explicit known-brand detection from the full title (e.g. "Louis Vuitton Les Sables Roses").
+                    // Also handle common two-word brands explicitly to avoid shorter tokens (e.g. prefer "Tom Ford" over "CK").
+                    $explicitPhraseMatched = null;
+                    if (
+                        preg_match('/\btom\s+ford\b/i', $searchTitle)
+                        || preg_match('/\btom\s+ford\b/i', Arr::get($recommendation, 'variant.data.original_name') ?? '')
+                        || preg_match('/tom[-_\s]*ford/i', $detailUrl ?? '')
+                        || preg_match('/tom[-_\s]*ford/i', $miniImageUrl ?? '')
+                        || preg_match('/tom[-_\s]*ford/i', $imageUrl ?? '')
+                    ) {
+                        $explicitPhraseMatched = 'Tom Ford';
+                    } elseif (
+                        preg_match('/\blouis\s+vuitton\b/i', $searchTitle)
+                        || preg_match('/louis-vuitton/i', $detailUrl ?? '')
+                        || preg_match('/\bles\s+sables/i', $searchTitle)
+                    ) {
+                        $explicitPhraseMatched = 'Louis Vuitton';
+                    } elseif (preg_match('/\bles\s+sables/i', $searchTitle) || preg_match('/les-sables/i', $detailUrl ?? '')) {
+                        $explicitPhraseMatched = 'Louis Vuitton';
+                    } elseif (
+                        preg_match('/\bcreed\b/i', $searchTitle)
+                        || preg_match('/\bcreed\b/i', Arr::get($recommendation, 'variant.data.original_name') ?? '')
+                        || preg_match('/creed/i', $detailUrl ?? '')
+                    ) {
+                        $explicitPhraseMatched = 'CREED';
+                    }
+
+                    if ($explicitPhraseMatched) {
+                        $knownFromTitle = $explicitPhraseMatched;
+                    } else {
+                        $knownFromTitle = $this->detectKnownBrandToken([$searchTitle, $detailUrl ?? null, $miniImageUrl ?? null, $imageUrl ?? null]);
+                    }
+
+                    if ($knownFromTitle) {
+                        $formatted = $this->formatBrandName($knownFromTitle);
+                        if ($formatted) {
+                            $inspiration['brand'] = $formatted;
+                            $stripped = $this->removeBrandFromTitle($searchTitle, $formatted);
+                            if ($stripped !== null) {
+                                $inspiration['title'] = $stripped;
+                            }
+
+                            // If the resulting title looks truncated (very short), try to recover full title from detail or image URL slugs.
+                            try {
+                                $currentTitle = $inspiration['title'] ?? '';
+                                if (is_string($currentTitle) && mb_strlen(trim($currentTitle), 'UTF-8') < 6) {
+                                    $possibleSlug = null;
+                                    if (! empty($detailUrl)) {
+                                        $path = parse_url($detailUrl, PHP_URL_PATH) ?: '';
+                                        $possibleSlug = trim((string) basename($path));
+                                    }
+                                    if (empty($possibleSlug) && ! empty($miniImageUrl)) {
+                                        $possibleSlug = trim((string) basename(parse_url($miniImageUrl, PHP_URL_PATH) ?: ''));
+                                    }
+                                    if (! empty($possibleSlug)) {
+                                        $slugText = preg_replace('/[-_]+/u', ' ', $possibleSlug);
+                                        $slugText = html_entity_decode($slugText, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                                        $recovered = $this->removeBrandFromTitle($slugText, $formatted);
+                                        if ($recovered !== null) {
+                                            $inspiration['title'] = $recovered;
+                                        }
+                                    }
+                                }
+                            } catch (\Throwable $e) {
+                                // ignore recovery errors
+                            }
+                        }
+                    } else {
+                        // Fallback: try simple TitleCase multi-word prefix heuristic (e.g. "Tom Ford Rose Prick").
+                        if (preg_match('/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\s+(.+)$/u', trim($searchTitle), $m)) {
+                            $candidateBrand = $m[1];
+                            $candidateTitle = $m[2];
+                            $formattedCandidate = $this->formatBrandName($candidateBrand);
+                            if ($formattedCandidate && $this->normalizeComparableString($formattedCandidate) !== $this->normalizeComparableString($inspiration['brand'] ?? null)) {
+                                $inspiration['brand'] = $formattedCandidate;
+                                $inspiration['title'] = $candidateTitle;
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore and continue
+            }
+            }
         // Hard override: if brand resolved as CK but title hints contain "opium", set brand to YSL.
         $inspirationTitleComparable = $this->normalizeComparableString($inspiration['title'] ?? null);
         if (($inspiration['brand'] ?? null) && $this->normalizeComparableString($inspiration['brand']) === 'ck') {
@@ -714,8 +973,31 @@ JS;
         );
         // Do not render match reasons in the widget.
         $matchReasons = [];
+        $variantOptions = $snapshot['variant_options'] ?? [];
+        if ($pricing !== null && is_array($variantOptions)) {
+            $variantOptions = array_map(function ($option) use ($pricing, $variantId, $variantCode) {
+                if (! is_array($option)) {
+                    return $option;
+                }
+
+                $matchesSelected = ($option['id'] ?? null) === $variantId
+                    || ($option['code'] ?? null) === $variantCode;
+
+                if ($matchesSelected) {
+                    if (! empty($pricing['is_action_price_active'])) {
+                        $option['action_price'] = $pricing['action_price'] ?? null;
+                        $option['action_from'] = $pricing['action_price_from'] ?? null;
+                        $option['action_to'] = $pricing['action_price_to'] ?? null;
+                    }
+                    $option['base_price'] = $pricing['base_price'] ?? null;
+                }
+
+                return $option;
+            }, $variantOptions);
+        }
+
         $variantOptionsPayload = $this->buildVariantOptions(
-            $snapshot['variant_options'] ?? [],
+            $variantOptions,
             $currency,
             $inspiration['brand'],
             $inspiration['title']
@@ -777,11 +1059,15 @@ JS;
                 'label' => 'Detail',
                 'url' => $detailUrl ?? '#',
             ],
-            'price' => array_filter([
+                'price' => array_filter([
                 'current' => $priceCurrent,
                 'original' => $priceOriginal,
                 'volume' => $displayVolume,
                 'discount' => $discountPercent,
+                'action_price' => (!empty($pricing['is_action_price_active']) ? $pricing['action_price'] : null),
+                'action_from' => (!empty($pricing['is_action_price_active']) ? $pricing['action_price_from'] : null),
+                'action_to' => (!empty($pricing['is_action_price_active']) ? $pricing['action_price_to'] : null),
+                'base_price' => $pricing['base_price'] ?? null,
             ], static fn ($value) => $value !== null && $value !== ''),
             'buy_button' => [
                 'variant_code' => $variantCode,
@@ -790,6 +1076,184 @@ JS;
             'variant_options' => $variantOptionsPayload,
             'metadata' => $metadata,
         ], static fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function resolveCzPricing(array $selectedOption, ProductVariant $variant, ?int $shopId = null): ?array
+    {
+        // If selectedOption already has a pre-resolved action_price from snapshot, use it directly.
+        $directActionPrice = $this->toFloat(Arr::get($selectedOption, 'action_price'));
+        if ($directActionPrice !== null) {
+            $currentPrice = $this->toFloat(Arr::get($selectedOption, 'price'));
+            $originalPrice = $this->toFloat(Arr::get($selectedOption, 'original_price'));
+            
+            return [
+                'base_price' => $originalPrice ?? $currentPrice,
+                'action_price' => $directActionPrice,
+                'action_price_from' => null,
+                'action_price_to' => null,
+                'is_action_price_active' => true,
+                'effective_price' => $directActionPrice,
+            ];
+        }
+        
+        $overlays = $variant->relationLoaded('overlays')
+            ? ($variant->overlays ?? collect())
+            : $variant->overlays()->with('shop')->get();
+        $overlayMaster = $overlays->first(fn ($record) => $record->relationLoaded('shop') && $record->shop?->is_master);
+        $overlayShop = $shopId ? $overlays->firstWhere('shop_id', $shopId) : null;
+        $overlayProduct = $variant->product?->shop_id ? $overlays->firstWhere('shop_id', $variant->product->shop_id) : null;
+
+        // Vždy preferuj master (CZ).
+        $overlay = $overlayMaster ?? $overlayShop ?? $overlayProduct;
+
+        $shop = $overlay?->shop ?? $variant->product?->shop;
+        $currency = $overlay?->currency_code ?? $selectedOption['currency'] ?? $variant->currency_code ?? $shop?->currency_code;
+
+        // Pokud jsme chytli jinou měnu a máme master overlay, přepneme na něj.
+        if ($currency !== null && strtoupper((string) $currency) !== 'CZK' && $overlayMaster) {
+            $overlay = $overlayMaster;
+            $shop = $overlayMaster->shop ?? $variant->product?->shop;
+            $currency = $overlayMaster->currency_code ?? $shop?->currency_code;
+        }
+
+        if ($currency !== null && strtoupper((string) $currency) !== 'CZK') {
+            return null;
+        }
+
+        $timezone = $shop->timezone ?? config('app.timezone');
+        $sources = [
+            $overlay && is_array($overlay->data) ? $overlay->data : [],
+            $selectedOption,
+            is_array($variant->data) ? $variant->data : [],
+        ];
+
+        $pricingRow = $this->extractPricelistRow($sources);
+        if (! $pricingRow) {
+            return null;
+        }
+
+        $basePriceCommon = $this->toFloat(Arr::get($pricingRow, 'commonPrice'));
+        $basePrice = $basePriceCommon ?? $this->toFloat(Arr::get($pricingRow, 'price'));
+        $actionConfig = Arr::get($pricingRow, 'actionPrice');
+        $actionPrice = is_array($actionConfig) ? $this->toFloat($actionConfig['price'] ?? null) : null;
+        $from = is_array($actionConfig) ? $this->parseDate($actionConfig['fromDate'] ?? null, $timezone, true) : null;
+        $to = is_array($actionConfig) ? $this->parseDate($actionConfig['toDate'] ?? null, $timezone, false, true) : null;
+
+        $now = CarbonImmutable::now($timezone);
+        $isActive = $actionPrice !== null && $this->isActionPriceActive($now, $from, $to);
+        $effective = $isActive && $actionPrice !== null
+            ? $actionPrice
+            : ($this->toFloat(Arr::get($pricingRow, 'price')) ?? $basePrice);
+
+        // Pokud máme jen běžnou cenu bez commonPrice, použij ji i jako original, aby se zobrazila.
+        $normalizedBase = $basePrice ?? $this->toFloat(Arr::get($pricingRow, 'price'));
+
+        return [
+            'base_price' => $normalizedBase,
+            'action_price' => $actionPrice,
+            'action_price_from' => $from?->toIso8601String(),
+            'action_price_to' => $to?->toIso8601String(),
+            'is_action_price_active' => $isActive,
+            'effective_price' => $effective,
+        ];
+    }
+
+    private function extractPricelistRow(array $sources): ?array
+    {
+        foreach ($sources as $source) {
+            if (! is_array($source)) {
+                continue;
+            }
+
+            $priceBlock = Arr::get($source, 'price');
+            $per = Arr::get($source, 'perPricelistPrices', []);
+            $nestedPer = is_array($priceBlock) ? Arr::get($priceBlock, 'perPricelistPrices', []) : [];
+            if (is_array($nestedPer) && $nestedPer !== []) {
+                $per = $per === [] ? $nestedPer : array_merge($per ?? [], $nestedPer);
+            }
+            if (is_array($per) && $per !== []) {
+                $selected = collect($per)->first(static function ($row) {
+                    return is_array($row) && (int) Arr::get($row, 'pricelistId') === 1;
+                }) ?? collect($per)->first(static fn ($row) => is_array($row));
+
+                if ($selected && is_array($selected)) {
+                    $priceBlock = Arr::get($selected, 'price');
+                    if (is_array($priceBlock)) {
+                        // Merge any top-level values into the price block so we don't lose commonPrice/actionPrice.
+                        return $priceBlock + Arr::except($selected, ['price']);
+                    }
+
+                    if ($priceBlock !== null) {
+                        $selected['price'] = $priceBlock;
+                    }
+
+                    return $selected;
+                }
+            }
+
+            if (is_array($priceBlock)) {
+                return $priceBlock;
+            }
+
+            if (is_numeric($priceBlock)) {
+                return ['price' => $priceBlock];
+            }
+        }
+
+        return null;
+    }
+
+    private function parseDate(?string $value, string $timezone, bool $startOfDay = false, bool $endOfDay = false): ?CarbonImmutable
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            $date = CarbonImmutable::parse($value, $timezone);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($startOfDay) {
+            return $date->startOfDay();
+        }
+
+        if ($endOfDay) {
+            return $date->endOfDay();
+        }
+
+        return $date;
+    }
+
+    private function isActionPriceActive(CarbonImmutable $now, ?CarbonImmutable $from, ?CarbonImmutable $to): bool
+    {
+        if ($from && $now->lt($from)) {
+            return false;
+        }
+
+        if ($to && $now->gt($to)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function toFloat($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && trim($value) !== '' && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
     }
 
     private function buildMatchReasons(
@@ -1235,6 +1699,75 @@ JS;
             $pushBrand($variantData['znacka-2'] ?? null);
         }
 
+        // Prefer explicit inspiration hints from product's base_payload when available
+        $productBasePayload = Arr::get($recommendation, 'variant.product.base_payload') ?? Arr::get($snapshot, 'base_payload');
+        if (is_array($productBasePayload)) {
+            $descriptive = Arr::get($productBasePayload, 'descriptiveParameters', []);
+            if (is_array($descriptive)) {
+                foreach ($descriptive as $param) {
+                    if (! is_array($param)) {
+                        continue;
+                    }
+                    $pname = isset($param['name']) ? mb_strtolower((string) $param['name'], 'UTF-8') : '';
+                    if ($pname === '' || (! str_contains($pname, 'inspiro') && ! str_contains($pname, 'podob'))) {
+                        continue;
+                    }
+                    $pvalue = $param['value'] ?? $param['values'] ?? null;
+                    if (is_array($pvalue)) {
+                        // some feeds use values array
+                        foreach ($pvalue as $v) {
+                            if (is_string($v) && trim($v) !== '') {
+                                $pushPair($v);
+                            } elseif (is_array($v) && isset($v['value'])) {
+                                $pushPair($v['value']);
+                            }
+                        }
+                    } elseif (is_string($pvalue) && trim($pvalue) !== '') {
+                        $pushPair($pvalue);
+                    }
+                }
+            }
+
+            $filtering = Arr::get($productBasePayload, 'filteringParameters', []);
+            if (is_array($filtering)) {
+                foreach ($filtering as $filter) {
+                    if (! is_array($filter)) {
+                        continue;
+                    }
+                    $fcode = isset($filter['code']) ? mb_strtolower((string) $filter['code'], 'UTF-8') : '';
+                    $fname = isset($filter['name']) ? mb_strtolower((string) $filter['name'], 'UTF-8') : '';
+                    $fdisplay = isset($filter['displayName']) ? mb_strtolower((string) $filter['displayName'], 'UTF-8') : '';
+
+                    // If filter explicitly indicates inspiration/similar, treat values as full inspiration pairs.
+                    if (
+                        str_contains($fcode, 'inspiro') || str_contains($fname, 'inspiro') || str_contains($fdisplay, 'inspiro') ||
+                        str_contains($fcode, 'podob') || str_contains($fname, 'podob') || str_contains($fdisplay, 'podob')
+                    ) {
+                        foreach ($filter['values'] ?? [] as $val) {
+                            if (is_array($val)) {
+                                $pushPair($val['name'] ?? $val['value'] ?? null);
+                            } elseif (is_string($val) && trim($val) !== '') {
+                                $pushPair($val);
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Otherwise if this is a brand-like filter, push brand values.
+                    if (! str_contains($fcode, 'znacka') && ! str_contains($fname, 'znack')) {
+                        continue;
+                    }
+                    foreach ($filter['values'] ?? [] as $val) {
+                        if (is_array($val) && isset($val['name'])) {
+                            $pushBrand($val['name']);
+                        } elseif (is_string($val) && trim($val) !== '') {
+                            $pushBrand($val);
+                        }
+                    }
+                }
+            }
+        }
+
         $filterParams = Arr::get($context, 'filter_parameters', []);
         foreach ($filterParams as $slug => $meta) {
             if (! is_array($meta)) {
@@ -1530,6 +2063,9 @@ JS;
             'black opium' => 'Yves Saint Laurent',
             'opium' => 'Yves Saint Laurent',
             'vuitton' => 'Louis Vuitton',
+            'les sables' => 'Louis Vuitton',
+            'les sables roses' => 'Louis Vuitton',
+            'tom ford' => 'Tom Ford',
         ];
 
         foreach ($titles as $title) {
@@ -1686,6 +2222,9 @@ JS;
                 'variant_price_display' => $this->formatPriceDisplay($priceCurrent, $currency),
                 'variant_original_price' => $priceOriginal,
                 'variant_original_price_display' => $this->formatPriceDisplay($priceOriginal, $currency),
+                'variant_action_price' => $option['action_price'] ?? null,
+                'variant_action_from' => $option['action_from'] ?? null,
+                'variant_action_to' => $option['action_to'] ?? null,
                 'detail_url' => $variantDetailUrl,
                 'variant_url' => $variantDetailUrl,
                 'variant_detail_url' => $variantDetailUrl,

@@ -4,6 +4,7 @@
   border: 1px solid var(--app-border-subtle);
   border-radius: 18px;
   background: var(--app-surface-elevated);
+  color: var(--app-text-primary);
 }
 
 .notificationList {
@@ -16,11 +17,22 @@
   background: var(--app-surface-panel);
 }
 
-.notificationButton {
-  transition: transform 160ms ease;
-  color: var(--app-text-inverse);
+.notificationItemNew {
+  background: var(--app-surface-panel);
 }
 
-.notificationButton:hover {
-  transform: translateY(-1px);
+.notificationItemRead {
+  background: var(--app-surface);
+}
+
+[data-theme='dark'] .notificationItemNew {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .notificationItemRead {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.notificationButton {
+  color: var(--app-text-inverse);
 }

@@ -10,7 +10,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
-import { IconRefresh, IconTrash } from '@tabler/icons-react';
+import { IconPlayerPlay, IconRefresh, IconTrash } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JobScheduleCatalogEntry, JobScheduleFrequency } from '../../../api/jobSchedules';
 import type { Shop } from '../../../api/shops';
@@ -58,20 +58,24 @@ type Props = {
     enabled: boolean;
     options: Record<string, unknown>;
   }) => Promise<void>;
+  onRun?: () => Promise<void> | void;
   onDelete?: (scheduleId: string) => Promise<void>;
   disabled?: boolean;
   saving?: boolean;
   deleting?: boolean;
+  running?: boolean;
 };
 
 export const AutomationJobCard = ({
   job,
   shops,
   onSubmit,
+  onRun,
   onDelete,
   disabled = false,
   saving = false,
   deleting = false,
+  running = false,
 }: Props) => {
   const supportsShop = job.supports_shop;
   const schedule = job.schedule;
@@ -338,7 +342,7 @@ export const AutomationJobCard = ({
           disabled={disabled || saving}
         />
 
-        {job.job_type === 'orders.refresh_statuses' && (
+        {(job.job_type === 'orders.refresh_statuses' || job.job_type === 'orders.refresh_statuses_deep') && (
           <NumberInput
             label="Zpětné období pro kontrolu změn"
             description="Počet hodin, o které se vrátíme při hledání změn stavů objednávek."
@@ -510,6 +514,18 @@ export const AutomationJobCard = ({
             >
               Vrátit změny
             </Button>
+            {schedule?.id && onRun && (
+              <Button
+                variant="light"
+                color="blue"
+                leftSection={<IconPlayerPlay size={16} />}
+                onClick={onRun}
+                loading={running}
+                disabled={disabled || saving || deleting}
+              >
+                Spustit teď
+              </Button>
+            )}
             {schedule?.id && onDelete && (
               <Button
                 variant="light"

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { JobSchedulePayload, JobScheduleUpdatePayload } from '../../../api/jobSchedules';
-import { createJobSchedule, deleteJobSchedule, listJobSchedules, updateJobSchedule } from '../../../api/jobSchedules';
+import { createJobSchedule, deleteJobSchedule, listJobSchedules, runJobSchedule, updateJobSchedule } from '../../../api/jobSchedules';
 
 export const useJobSchedules = () =>
   useQuery({
@@ -33,6 +33,16 @@ export const useDeleteJobSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteJobSchedule(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'job-schedules'] });
+    },
+  });
+};
+
+export const useRunJobSchedule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => runJobSchedule(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'job-schedules'] });
     },

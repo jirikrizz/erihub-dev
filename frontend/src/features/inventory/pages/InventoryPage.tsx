@@ -17,20 +17,26 @@ import {
   Text,
   TextInput,
   Title,
-  UnstyledButton,
+  Tooltip,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconDownload, IconListSearch, IconSparkles, IconTag, IconTags, IconTrash, IconUpload } from '@tabler/icons-react';
+import {
+  IconFilter,
+  IconListSearch,
+  IconSparkles,
+  IconTag,
+  IconTags,
+  IconTrash,
+  IconUpload,
+  IconX,
+} from '@tabler/icons-react';
 import type { CSSProperties, FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from '@mantine/hooks';
-import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowsSort,
-} from '@tabler/icons-react';
+import { TableExportAction } from '../../../components/table/TableExportAction';
 import type { InventoryVariant, InventoryVariantTag } from '../../../api/inventory';
 import {
   useInventoryFilters,
@@ -45,7 +51,6 @@ import {
   createInventoryTag,
   deleteInventoryTag,
   exportInventoryVariants,
-  exportInventoryVariantsByIds,
   syncInventoryVariantTags,
   updateInventoryTag,
   bulkForecastInventoryVariants,
@@ -61,6 +66,8 @@ import { useShops } from '../../shoptet/hooks/useShops';
 import { useUserPreference } from '../../../hooks/useUserPreference';
 import { PageShell } from '../../../components/layout/PageShell';
 import { TableToolbar } from '../../../components/table/TableToolbar';
+import { DataTableHeaderCell, type HeaderColumn } from '../../../components/table/DataTableHeaderCell';
+import tableClasses from '../../../components/table/DataTable.module.css';
 import classes from './InventoryPage.module.css';
 
 const statusOptions: Array<{ value: InventoryVariant['stock_status'] | 'all'; label: string }> = [
@@ -310,7 +317,7 @@ const DEFAULT_COLUMN_WIDTHS = {
   sku: 140,
   ean: 140,
   status: 160,
-  ai_insight: 240,
+  ai_insight: 280,
   stock: 160,
   ordered: 170,
   min_stock_supply: 160,
@@ -323,6 +330,7 @@ const DEFAULT_COLUMN_WIDTHS = {
 } as const;
 
 type ResizableColumnKey = keyof typeof DEFAULT_COLUMN_WIDTHS;
+const INVENTORY_ROW_HEIGHT = 84;
 
 const COLUMN_WIDTH_KEYS = Object.keys(DEFAULT_COLUMN_WIDTHS) as ResizableColumnKey[];
 
@@ -440,10 +448,10 @@ const sanitizeAiRecommendations = (input: string[]): AiOrderRecommendation[] => 
 };
 
 const PAGE_SIZE_OPTIONS = [
-  { value: '10', label: '10' },
-  { value: '25', label: '25' },
-  { value: '50', label: '50' },
-  { value: '100', label: '100' },
+  { value: '10', label: '10 / str.' },
+  { value: '25', label: '25 / str.' },
+  { value: '50', label: '50 / str.' },
+  { value: '100', label: '100 / str.' },
 ];
 
 const resolveVariantCurrency = (variant: InventoryVariant) =>
@@ -520,20 +528,6 @@ const formatAiDeadlineLabel = (days: number | string | null | undefined): string
   }
 
   return `Do ${numeric.toFixed(1)} dnů`;
-};
-
-const formatAiQuantityLabel = (quantity: number | string | null | undefined): string | null => {
-  if (quantity === null || quantity === undefined) {
-    return null;
-  }
-
-  const numeric = typeof quantity === 'string' ? Number(quantity) : quantity;
-
-  if (!Number.isFinite(numeric)) {
-    return null;
-  }
-
-  return `${formatNumber(numeric, 0)} ks`;
 };
 
 const formatFileSize = (bytes: number | null | undefined): string => {
@@ -810,7 +804,27 @@ export const InventoryPage = () => {
   const [arrivalDaysInput, setArrivalDaysInput] = useState('14');
   const [expectedArrivalDate, setExpectedArrivalDate] = useState('');
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [columnFilters, setColumnFilters] = useState({
+    orderedMin: '',
+    orderedMax: '',
+    priceMin: '',
+    priceMax: '',
+    purchasePriceMin: '',
+    purchasePriceMax: '',
+    lifetimeMin: '',
+    lifetimeMax: '',
+    sales30Min: '',
+    sales30Max: '',
+    demandMin: '',
+    demandMax: '',
+    runwayMin: '',
+    runwayMax: '',
+  });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectedVariantsMap, setSelectedVariantsMap] = useState<Record<string, InventoryVariant>>(
+    () => ({})
+  );
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
     visibilityFromList(
       parseArrayParam('columns'),
@@ -824,14 +838,6 @@ export const InventoryPage = () => {
   const [bulkAssignOpened, setBulkAssignOpened] = useState(false);
   const [bulkAssignLoading, setBulkAssignLoading] = useState(false);
   const queryClient = useQueryClient();
-  const columnResizeStateRef = useRef<{
-    key: ResizableColumnKey;
-    startX: number;
-    startWidth: number;
-    previousUserSelect: string;
-    previousCursor: string;
-    cleanup: () => void;
-  } | null>(null);
   const lastSelectedIndexRef = useRef<number | null>(null);
   const { data: tagsData } = useInventoryTags();
   const sortedTags = useMemo(
@@ -927,15 +933,43 @@ export const InventoryPage = () => {
     },
   });
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [showOrdersPanel, setShowOrdersPanel] = useState(false);
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
 
   const clearSelection = useCallback(() => {
     const next = new Set<string>();
     setSelectedIds(next);
     setShowSelectedOnly(false);
+    setSelectedVariantsMap({});
     lastSelectedIndexRef.current = null;
   }, []);
+
+  const toggleSort = useCallback(
+    (column: SortableColumn) => {
+      setSort((current) => {
+        const next: { column: SortableColumn; direction: 'asc' | 'desc' } =
+          current.column === column
+            ? { column, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+            : { column, direction: 'asc' };
+
+        commitSearchParams((params) => {
+          if (next.column === 'code' && next.direction === 'asc') {
+            params.delete('sort_by');
+            params.delete('sort_dir');
+          } else {
+            params.set('sort_by', next.column);
+            params.set('sort_dir', next.direction);
+          }
+          params.delete('page');
+        });
+
+        return next;
+      });
+      clearSelection();
+      setPage(1);
+    },
+    [clearSelection, commitSearchParams]
+  );
 
   const forecastBulkMutation = useMutation({
     mutationFn: (variantIds: string[]) => bulkForecastInventoryVariants(variantIds),
@@ -1007,73 +1041,6 @@ export const InventoryPage = () => {
       return { width, minWidth: width };
     },
     [getColumnWidth]
-  );
-
-  const applyColumnWidth = useCallback((key: ResizableColumnKey, width: number) => {
-    const nextWidth = clampColumnWidth(width);
-    setColumnWidths((current) => {
-      if (current[key] === nextWidth) {
-        return current;
-      }
-
-      return { ...current, [key]: nextWidth };
-    });
-  }, []);
-
-  const handleResizeStart = useCallback(
-    (key: ResizableColumnKey, event: React.MouseEvent<HTMLSpanElement>) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const startX = event.clientX;
-      const startWidth = getColumnWidth(key);
-      const previousUserSelect = document.body.style.userSelect;
-      const previousCursor = document.body.style.cursor;
-
-      const resizeState = {
-        key,
-        startX,
-        startWidth,
-        previousUserSelect,
-        previousCursor,
-        cleanup: () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', stopResizing);
-        },
-      };
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const state = columnResizeStateRef.current;
-        if (!state) {
-          return;
-        }
-
-        const delta = moveEvent.clientX - state.startX;
-        applyColumnWidth(state.key, state.startWidth + delta);
-      };
-
-      const stopResizing = () => {
-        const state = columnResizeStateRef.current;
-        if (state) {
-          document.body.style.userSelect = state.previousUserSelect;
-          document.body.style.cursor = state.previousCursor;
-          state.cleanup();
-        }
-        columnResizeStateRef.current = null;
-      };
-
-      resizeState.cleanup = () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', stopResizing);
-      };
-
-      columnResizeStateRef.current = resizeState;
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', stopResizing);
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'col-resize';
-    },
-    [applyColumnWidth, getColumnWidth]
   );
 
   const updateColumnParams = useCallback(
@@ -1275,18 +1242,6 @@ export const InventoryPage = () => {
     };
   }, []);
 
-  useEffect(() => {
-    return () => {
-      const state = columnResizeStateRef.current;
-      if (state) {
-        state.cleanup();
-        document.body.style.userSelect = state.previousUserSelect;
-        document.body.style.cursor = state.previousCursor;
-        columnResizeStateRef.current = null;
-      }
-    };
-  }, []);
-
   const params = useMemo(() => {
     const query: Record<string, unknown> = {
       page,
@@ -1295,9 +1250,7 @@ export const InventoryPage = () => {
       sort_dir: sort.direction,
     };
 
-    if (showSelectedOnly && selectedIds.size > 0) {
-      query.ids = Array.from(selectedIds);
-    }
+    // showSelectedOnly je řešeno klientsky, ids neposíláme do API
     if (debouncedSearch) {
       query.search = debouncedSearch;
     }
@@ -1379,7 +1332,16 @@ export const InventoryPage = () => {
 
   const { data, isLoading } = useInventoryVariants(params);
 
-  const variants = useMemo(() => data?.data ?? [], [data]);
+  const variants = useMemo(() => {
+    const list = data?.data ?? [];
+    const seen = new Set<string>();
+    const deduped = list.filter((variant) => {
+      if (seen.has(variant.id)) return false;
+      seen.add(variant.id);
+      return true;
+    });
+    return deduped;
+  }, [data]);
   const variantsMap = useMemo(() => new Map(variants.map((variant) => [variant.id, variant])), [variants]);
 
   useEffect(() => {
@@ -1833,8 +1795,6 @@ export const InventoryPage = () => {
     aiOrderRecommendations,
   ]);
 
-  const visibleColumnCount = 3 + Object.values(columnVisibility).filter(Boolean).length;
-
   const assigningVariantId =
     syncVariantTagsMutation.isPending && syncVariantTagsMutation.variables
       ? syncVariantTagsMutation.variables.variantId
@@ -1857,9 +1817,295 @@ export const InventoryPage = () => {
     variants.length > 0 && variants.every((variant) => selectedIds.has(variant.id));
   const someVisibleSelected =
     variants.length > 0 && variants.some((variant) => selectedIds.has(variant.id));
-  const selectedVisibleCount = variants.filter((variant) => selectedIds.has(variant.id)).length;
   const totalCount = data?.total ?? 0;
-  const displayedCount = variants.length;
+  const handleColumnFilterChange = useCallback(
+    (key: keyof typeof columnFilters, value: string) => {
+      setColumnFilters((current) => ({ ...current, [key]: value }));
+    },
+    []
+  );
+
+  const baseRows = showSelectedOnly
+    ? Array.from(selectedIds)
+        .map((id) => selectedVariantsMap[id])
+        .filter((variant): variant is InventoryVariant => Boolean(variant))
+    : variants;
+
+  const variantMatchesColumnFilters = useCallback(
+    (variant: InventoryVariant) => {
+      const orderedValue = toNumber(variant.ordered_quantity) ?? 0;
+      const priceValue = toNumber(variant.price) ?? 0;
+      const purchasePriceValue = toNumber(variant.purchase_price) ?? 0;
+      const lifetimeValue = toNumber(variant.lifetime_revenue) ?? 0;
+      const sales30Value = toNumber(variant.last_30_quantity) ?? 0;
+      const demandValue = toNumber(variant.average_daily_sales) ?? 0;
+      const runwayValue = toNumber(variant.stock_runway_days) ?? 0;
+
+      const minOk = (input: string, value: number) =>
+        input.trim() === '' || value >= Number(input);
+      const maxOk = (input: string, value: number) =>
+        input.trim() === '' || value <= Number(input);
+
+      if (!minOk(columnFilters.orderedMin, orderedValue) || !maxOk(columnFilters.orderedMax, orderedValue)) {
+        return false;
+      }
+      if (!minOk(columnFilters.priceMin, priceValue) || !maxOk(columnFilters.priceMax, priceValue)) {
+        return false;
+      }
+      if (
+        !minOk(columnFilters.purchasePriceMin, purchasePriceValue) ||
+        !maxOk(columnFilters.purchasePriceMax, purchasePriceValue)
+      ) {
+        return false;
+      }
+      if (!minOk(columnFilters.lifetimeMin, lifetimeValue) || !maxOk(columnFilters.lifetimeMax, lifetimeValue)) {
+        return false;
+      }
+      if (!minOk(columnFilters.sales30Min, sales30Value) || !maxOk(columnFilters.sales30Max, sales30Value)) {
+        return false;
+      }
+      if (!minOk(columnFilters.demandMin, demandValue) || !maxOk(columnFilters.demandMax, demandValue)) {
+        return false;
+      }
+      if (!minOk(columnFilters.runwayMin, runwayValue) || !maxOk(columnFilters.runwayMax, runwayValue)) {
+        return false;
+      }
+      return true;
+    },
+    [columnFilters]
+  );
+
+  const tableRows = useMemo(
+    () => baseRows.filter((variant) => variantMatchesColumnFilters(variant)),
+    [baseRows, variantMatchesColumnFilters]
+  );
+  const displayedCount = tableRows.length;
+
+  useEffect(() => {
+    setSelectedVariantsMap((current) => {
+      const next = { ...current };
+      variants.forEach((variant) => {
+        if (selectedIds.has(variant.id)) {
+          next[variant.id] = variant;
+        }
+      });
+      return next;
+    });
+  }, [variants, selectedIds]);
+
+  const headerSortState = useMemo(
+    () => [{ column: sort.column, direction: sort.direction }],
+    [sort]
+  );
+
+  const headerColumns = useMemo<HeaderColumn<string, SortableColumn>[]>(
+    () => {
+      const renderRangeFilter = (
+        minKey: keyof typeof columnFilters,
+        maxKey: keyof typeof columnFilters
+      ) => (
+        <Stack gap={6}>
+          <TextInput
+            size="xs"
+            placeholder="od"
+            type="number"
+            value={columnFilters[minKey]}
+            onChange={(event) => handleColumnFilterChange(minKey, event.currentTarget.value)}
+          />
+          <TextInput
+            size="xs"
+            placeholder="do"
+            type="number"
+            value={columnFilters[maxKey]}
+            onChange={(event) => handleColumnFilterChange(maxKey, event.currentTarget.value)}
+          />
+        </Stack>
+      );
+
+      const rangeActive = (minKey: keyof typeof columnFilters, maxKey: keyof typeof columnFilters) =>
+        columnFilters[minKey].trim() !== '' || columnFilters[maxKey].trim() !== '';
+
+      const cols: HeaderColumn<string, SortableColumn>[] = [];
+
+      cols.push({ key: 'code', label: 'Kód', sortable: true, sortKey: 'code' });
+
+      if (columnVisibility.variant) {
+        cols.push({ key: 'variant', label: 'Varianta', sortable: true, sortKey: 'variant' });
+      }
+      if (columnVisibility.product) {
+        cols.push({ key: 'product', label: 'Produkt' });
+      }
+      if (columnVisibility.default_category_name) {
+        cols.push({ key: 'default_category_name', label: 'Výchozí kategorie' });
+      }
+      if (columnVisibility.seasonality_labels) {
+        cols.push({ key: 'seasonality_labels', label: 'Roční období' });
+      }
+      if (columnVisibility.brand) {
+        cols.push({ key: 'brand', label: 'Značka', sortable: true, sortKey: 'brand' });
+      }
+      if (columnVisibility.supplier) {
+        cols.push({ key: 'supplier', label: 'Dodavatel', sortable: true, sortKey: 'supplier' });
+      }
+      if (columnVisibility.product_flags) {
+        cols.push({ key: 'product_flags', label: 'Shoptet štítky' });
+      }
+      if (columnVisibility.tags) {
+        cols.push({ key: 'tags', label: 'Štítky' });
+      }
+      if (columnVisibility.sku) {
+        cols.push({ key: 'sku', label: 'SKU' });
+      }
+      if (columnVisibility.ean) {
+        cols.push({ key: 'ean', label: 'EAN' });
+      }
+
+      cols.push({ key: 'status', label: 'Stav' });
+
+      if (columnVisibility.ai_insight) {
+        cols.push({ key: 'ai_insight', label: 'AI doporučení' });
+      }
+      if (columnVisibility.stock) {
+        cols.push({ key: 'stock', label: 'Zásoba', sortable: true, sortKey: 'stock' });
+      }
+      if (columnVisibility.ordered) {
+        cols.push({
+          key: 'ordered',
+          label: 'Objednáno',
+          sortable: true,
+          sortKey: 'ordered',
+          filterContent: renderRangeFilter('orderedMin', 'orderedMax'),
+          filterActive: rangeActive('orderedMin', 'orderedMax'),
+        });
+      }
+      if (columnVisibility.min_stock_supply) {
+        cols.push({
+          key: 'min_stock_supply',
+          label: 'Min. zásoba',
+          sortable: true,
+          sortKey: 'min_stock_supply',
+        });
+      }
+      if (columnVisibility.price) {
+        cols.push({
+          key: 'price',
+          label: 'Cena',
+          sortable: true,
+          sortKey: 'price',
+          filterContent: renderRangeFilter('priceMin', 'priceMax'),
+          filterActive: rangeActive('priceMin', 'priceMax'),
+        });
+      }
+      if (columnVisibility.purchase_price) {
+        cols.push({
+          key: 'purchase_price',
+          label: 'Nákupní cena',
+          sortable: true,
+          sortKey: 'purchase_price',
+          filterContent: renderRangeFilter('purchasePriceMin', 'purchasePriceMax'),
+          filterActive: rangeActive('purchasePriceMin', 'purchasePriceMax'),
+        });
+      }
+      if (columnVisibility.lifetime_revenue) {
+        cols.push({
+          key: 'lifetime_revenue',
+          label: 'Lifetime obrat',
+          sortable: true,
+          sortKey: 'lifetime_revenue',
+          filterContent: renderRangeFilter('lifetimeMin', 'lifetimeMax'),
+          filterActive: rangeActive('lifetimeMin', 'lifetimeMax'),
+        });
+      }
+      if (columnVisibility.last_30_quantity) {
+        cols.push({
+          key: 'last_30_quantity',
+          label: 'Prodeje (30 dní)',
+          sortable: true,
+          sortKey: 'last_30_quantity',
+          filterContent: renderRangeFilter('sales30Min', 'sales30Max'),
+          filterActive: rangeActive('sales30Min', 'sales30Max'),
+        });
+      }
+      if (columnVisibility.average_daily_sales) {
+        cols.push({
+          key: 'average_daily_sales',
+          label: 'Denní poptávka',
+          sortable: true,
+          sortKey: 'average_daily_sales',
+          filterContent: renderRangeFilter('demandMin', 'demandMax'),
+          filterActive: rangeActive('demandMin', 'demandMax'),
+        });
+      }
+      if (columnVisibility.stock_runway_days) {
+        cols.push({
+          key: 'stock_runway_days',
+          label: 'Výdrž zásoby',
+          sortable: true,
+          sortKey: 'stock_runway_days',
+          filterContent: renderRangeFilter('runwayMin', 'runwayMax'),
+          filterActive: rangeActive('runwayMin', 'runwayMax'),
+        });
+      }
+
+      return cols;
+    },
+    [columnFilters, columnVisibility, handleColumnFilterChange]
+  );
+
+
+  const visibleColumnCount = 1 + headerColumns.length;
+
+  const handleHeaderSort = useCallback(
+    (column: SortableColumn) => {
+      toggleSort(column);
+    },
+    [toggleSort]
+  );
+
+  const renderTruncatedText = useCallback(
+    (value: string | null | undefined, size: 'sm' | 'xs' = 'sm') => {
+      if (!value) {
+        return null;
+      }
+      return (
+        <Tooltip label={value} withinPortal multiline>
+          <Text size={size} className={classes.truncate}>
+            {value}
+          </Text>
+        </Tooltip>
+      );
+    },
+    []
+  );
+
+  const tableViewportRef = useRef<HTMLDivElement | null>(null);
+  const tableViewportHeight = useMemo(() => {
+    const target = tableRows.length * INVENTORY_ROW_HEIGHT;
+    return Math.min(720, Math.max(360, target || 360));
+  }, [tableRows.length]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: tableRows.length,
+    getScrollElement: () => tableViewportRef.current,
+    estimateSize: () => INVENTORY_ROW_HEIGHT,
+    overscan: 8,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? INVENTORY_ROW_HEIGHT,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalVirtualHeight = rowVirtualizer.getTotalSize();
+
+  const totalTableWidth = useMemo(() => {
+    const selectionWidth = 34;
+    const fallbackWidth = 160;
+    const columnsWidth = headerColumns.reduce((sum, column) => {
+      const key = column.key as ResizableColumnKey;
+      if (COLUMN_WIDTH_KEYS.includes(key)) {
+        return sum + getColumnWidth(key);
+      }
+      return sum + fallbackWidth;
+    }, 0);
+    return selectionWidth + columnsWidth;
+  }, [getColumnWidth, headerColumns]);
 
   const handleSelectAllVisible = useCallback(
     (checked: boolean) => {
@@ -1874,6 +2120,17 @@ export const InventoryPage = () => {
 
         return next;
       });
+      setSelectedVariantsMap((current) => {
+        const next = { ...current };
+        variants.forEach((variant) => {
+          if (checked) {
+            next[variant.id] = variant;
+          } else {
+            delete next[variant.id];
+          }
+        });
+        return next;
+      });
       if (checked && variants.length > 0) {
         lastSelectedIndexRef.current = variants.length - 1;
       } else if (!checked) {
@@ -1885,11 +2142,12 @@ export const InventoryPage = () => {
 
   const handleSelectVariant = useCallback(
     (
-      variantId: string,
+      variant: InventoryVariant,
       checked: boolean,
       meta: { shiftKey?: boolean } = {}
     ) => {
-      const currentIndex = variants.findIndex((variant) => variant.id === variantId);
+      const variantId = variant.id;
+      const currentIndex = variants.findIndex((entry) => entry.id === variantId);
 
       if (currentIndex === -1) {
         return;
@@ -1927,25 +2185,36 @@ export const InventoryPage = () => {
         return next;
       });
 
+      setSelectedVariantsMap((current) => {
+        const next = { ...current };
+        if (checked) {
+          next[variantId] = variant;
+        } else {
+          delete next[variantId];
+        }
+        return next;
+      });
+
       lastSelectedIndexRef.current = currentIndex;
     },
     [variants]
   );
 
-  const exportLabel =
-    selectedCount > 0
-      ? `Export vybrané (${selectedCount.toLocaleString('cs-CZ')})`
-      : 'Export CSV';
-
-  const handleExport = useCallback(async () => {
-    try {
-      setExporting(true);
-
+  const handleExport = useCallback(
+    async (options: { scope: 'all' | 'selected'; columns: 'all' | 'visible' }) => {
       const idsToExport = Array.from(selectedIds);
-      const hasSelection = idsToExport.length > 0;
-      const blob = hasSelection
-        ? await exportInventoryVariantsByIds(idsToExport)
-        : await exportInventoryVariants(params);
+      const shouldExportSelected = options.scope === 'selected' && idsToExport.length > 0;
+
+      const exportParams: Record<string, unknown> = { ...params };
+      if (options.columns === 'visible') {
+        exportParams.columns = visibilityToList(columnVisibility);
+        exportParams.columns_version = '3';
+      }
+      if (shouldExportSelected) {
+        exportParams.ids = idsToExport;
+      }
+
+      const blob = await exportInventoryVariants(exportParams);
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -1956,13 +2225,12 @@ export const InventoryPage = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      if (hasSelection) {
+      if (shouldExportSelected) {
         clearSelection();
       }
-    } finally {
-      setExporting(false);
-    }
-  }, [clearSelection, params, selectedIds]);
+    },
+    [clearSelection, columnVisibility, params, selectedIds]
+  );
 
   const handleOrderFileChange = useCallback((file: File | null) => {
     if (file) {
@@ -2043,30 +2311,6 @@ export const InventoryPage = () => {
     },
     [deleteOrderMutation]
   );
-
-  const toggleSort = (column: SortableColumn) => {
-    setSort((current) => {
-      const next: { column: SortableColumn; direction: 'asc' | 'desc' } =
-        current.column === column
-          ? { column, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-          : { column, direction: 'asc' };
-
-      commitSearchParams((params) => {
-        if (next.column === 'code' && next.direction === 'asc') {
-          params.delete('sort_by');
-          params.delete('sort_dir');
-        } else {
-          params.set('sort_by', next.column);
-          params.set('sort_dir', next.direction);
-        }
-        params.delete('page');
-      });
-
-      return next;
-    });
-    clearSelection();
-    setPage(1);
-  };
 
   const handlePageChange = (nextPage: number) => {
     const normalized = Number.isFinite(nextPage) && nextPage > 0 ? Math.floor(nextPage) : 1;
@@ -2273,81 +2517,6 @@ export const InventoryPage = () => {
     }
   };
 
-  const renderSortIcon = (column: SortableColumn) => {
-    if (sort.column !== column) {
-      return <IconArrowsSort size={14} stroke={1.8} />;
-    }
-
-    return sort.direction === 'asc' ? (
-      <IconArrowUp size={14} stroke={1.8} />
-    ) : (
-      <IconArrowDown size={14} stroke={1.8} />
-    );
-  };
-
-  const SortableHeader = ({
-    label,
-    column,
-    widthKey,
-  }: {
-    label: string;
-    column: SortableColumn;
-    widthKey?: ResizableColumnKey;
-  }) => {
-    const key = (widthKey ?? column) as ResizableColumnKey;
-    const style = COLUMN_WIDTH_KEYS.includes(key) ? getColumnStyle(key) : undefined;
-
-    return (
-      <Table.Th style={style}>
-        <div className={classes.resizableHeader}>
-          <UnstyledButton
-            onClick={() => toggleSort(column)}
-            className={classes.headerButton}
-          >
-            <Group justify="space-between" gap={6} wrap="nowrap">
-              <Text fw={600} size="sm">
-                {label}
-              </Text>
-              {renderSortIcon(column)}
-            </Group>
-          </UnstyledButton>
-          {COLUMN_WIDTH_KEYS.includes(key) && (
-            <span
-              role="presentation"
-              className={classes.resizeHandle}
-              onMouseDown={(event) => handleResizeStart(key, event)}
-            />
-          )}
-        </div>
-      </Table.Th>
-    );
-  };
-
-  const ResizableHeader = ({
-    label,
-    columnKey,
-  }: {
-    label: string;
-    columnKey: ResizableColumnKey;
-  }) => {
-    const style = getColumnStyle(columnKey);
-
-    return (
-      <Table.Th style={style}>
-        <div className={classes.resizableHeader}>
-          <Text fw={600} size="sm">
-            {label}
-          </Text>
-          <span
-            role="presentation"
-            className={classes.resizeHandle}
-            onMouseDown={(event) => handleResizeStart(columnKey, event)}
-          />
-        </div>
-      </Table.Th>
-    );
-  };
-
   return (
     <PageShell
       className={classes.page}
@@ -2393,13 +2562,61 @@ export const InventoryPage = () => {
         </Card>
       </SimpleGrid>
 
-      <Card withBorder className={classes.sectionCard}>
-        <div className={classes.sectionHeaderTitle}>
-          <Title order={4}>Objednávky u dodavatelů</Title>
-          <Text size="sm" className={classes.sectionSubtitle}>
-            Nahraj Excel (kód varianty + počet kusů) a udrž přehled, co je právě na cestě.
-          </Text>
-        </div>
+      <Group justify="flex-start" gap="sm" wrap="wrap">
+        {!showOrdersPanel && (
+          <Button
+            variant="light"
+            size="xs"
+            radius="xl"
+            leftSection={<IconUpload size={14} />}
+            onClick={() => setShowOrdersPanel(true)}
+          >
+            Nahrát objednávku
+          </Button>
+        )}
+        {showOrdersPanel && (
+          <Button
+            variant="subtle"
+            size="xs"
+            radius="xl"
+            leftSection={<IconX size={14} />}
+            onClick={() => setShowOrdersPanel(false)}
+          >
+            Skrýt objednávky
+          </Button>
+        )}
+        {!showFiltersPanel && (
+          <Button
+            variant="light"
+            size="xs"
+            radius="xl"
+            leftSection={<IconFilter size={14} />}
+            onClick={() => setShowFiltersPanel(true)}
+          >
+            Rozšířená filtrace
+          </Button>
+        )}
+        {showFiltersPanel && (
+          <Button
+            variant="subtle"
+            size="xs"
+            radius="xl"
+            leftSection={<IconX size={14} />}
+            onClick={() => setShowFiltersPanel(false)}
+          >
+            Skrýt filtry
+          </Button>
+        )}
+      </Group>
+
+      {showOrdersPanel && (
+        <Card withBorder className={classes.sectionCard}>
+          <div className={classes.sectionHeaderTitle}>
+            <Title order={4}>Objednávky u dodavatelů</Title>
+            <Text size="sm" className={classes.sectionSubtitle}>
+              Nahraj Excel (kód varianty + počet kusů) a udrž přehled, co je právě na cestě.
+            </Text>
+          </div>
 
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg" className={classes.ordersGrid}>
           <form onSubmit={handleOrderUpload} className={classes.orderForm}>
@@ -2581,7 +2798,9 @@ export const InventoryPage = () => {
           </div>
         </SimpleGrid>
       </Card>
+      )}
 
+      {showFiltersPanel && (
       <Card withBorder className={classes.sectionCard}>
         <div className={classes.sectionHeader}>
           <div className={classes.sectionHeaderTitle}>
@@ -2612,7 +2831,7 @@ export const InventoryPage = () => {
         </div>
 
         <div className={classes.filterSections}>
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 6 }} spacing="sm">
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="sm">
             <TextInput
               label="Hledat"
               placeholder="Kód, SKU, EAN..."
@@ -2620,31 +2839,6 @@ export const InventoryPage = () => {
               onChange={(event) =>
                 handleTextFilterChange('search', event.currentTarget.value, setSearch)
               }
-
-            />
-            <TextInput
-              label="Kód varianty"
-              value={code}
-              onChange={(event) =>
-                handleTextFilterChange('code', event.currentTarget.value, setCode)
-              }
-
-            />
-            <TextInput
-              label="SKU"
-              value={sku}
-              onChange={(event) =>
-                handleTextFilterChange('sku', event.currentTarget.value, setSku)
-              }
-
-            />
-            <TextInput
-              label="EAN"
-              value={ean}
-              onChange={(event) =>
-                handleTextFilterChange('ean', event.currentTarget.value, setEan)
-              }
-
             />
             <TextInput
               label="Název varianty"
@@ -2652,7 +2846,6 @@ export const InventoryPage = () => {
               onChange={(event) =>
                 handleTextFilterChange('variant', event.currentTarget.value, setVariantName)
               }
-
             />
             <TextInput
               label="Název produktu"
@@ -2660,7 +2853,27 @@ export const InventoryPage = () => {
               onChange={(event) =>
                 handleTextFilterChange('product_name', event.currentTarget.value, setProductName)
               }
-
+            />
+            <TextInput
+              label="Kód varianty"
+              value={code}
+              onChange={(event) =>
+                handleTextFilterChange('code', event.currentTarget.value, setCode)
+              }
+            />
+            <TextInput
+              label="SKU"
+              value={sku}
+              onChange={(event) =>
+                handleTextFilterChange('sku', event.currentTarget.value, setSku)
+              }
+            />
+            <TextInput
+              label="EAN"
+              value={ean}
+              onChange={(event) =>
+                handleTextFilterChange('ean', event.currentTarget.value, setEan)
+              }
             />
             <TextInput
               label="Produkt"
@@ -2669,7 +2882,6 @@ export const InventoryPage = () => {
               onChange={(event) =>
                 handleTextFilterChange('product', event.currentTarget.value, setProductIdentifier)
               }
-
             />
           </SimpleGrid>
 
@@ -2685,7 +2897,6 @@ export const InventoryPage = () => {
               onChange={(value) =>
                 handleArrayFilterChange('variant_name', value, setVariantNameFilter)
               }
-
             />
             <MultiSelect
               label="Značky"
@@ -2695,7 +2906,6 @@ export const InventoryPage = () => {
               placeholder="Vyber značky"
               nothingFoundMessage="Žádné značky"
               onChange={(value) => handleArrayFilterChange('brand', value, setBrand)}
-
             />
             <MultiSelect
               label="Dodavatelé"
@@ -2705,18 +2915,16 @@ export const InventoryPage = () => {
               placeholder="Vyber dodavatele"
               nothingFoundMessage="Žádní dodavatelé"
               onChange={(value) => handleArrayFilterChange('supplier', value, setSupplier)}
-
             />
             <MultiSelect
-              label="Štítky Shoptet"
-              data={flagOptions}
-              value={flagFilter}
+              label="Shopy"
+              data={shopOptions}
+              value={shopFilter}
               searchable
-              placeholder="Vyber štítky"
-              nothingFoundMessage="Žádné štítky"
+              placeholder="Všechny shopy"
+              nothingFoundMessage="Žádné shopy"
               clearable
-              onChange={(value) => handleArrayFilterChange('flag', value, setFlagFilter)}
-
+              onChange={(value) => handleArrayFilterChange('shop_id', value, setShopFilter)}
             />
             <MultiSelect
               label="Výchozí kategorie"
@@ -2729,7 +2937,26 @@ export const InventoryPage = () => {
               onChange={(value) =>
                 handleArrayFilterChange('default_category', value, setCategoryFilter)
               }
-
+            />
+            <MultiSelect
+              label="Štítky"
+              data={tagFilterOptions}
+              value={tagFilter}
+              searchable
+              placeholder="Vyber štítky"
+              nothingFoundMessage="Žádné štítky"
+              clearable
+              onChange={(value) => handleArrayFilterChange('tag_id', value, setTagFilter)}
+            />
+            <MultiSelect
+              label="Štítky Shoptet"
+              data={flagOptions}
+              value={flagFilter}
+              searchable
+              placeholder="Vyber štítky"
+              nothingFoundMessage="Žádné štítky"
+              clearable
+              onChange={(value) => handleArrayFilterChange('flag', value, setFlagFilter)}
             />
             <MultiSelect
               label="Roční období"
@@ -2742,29 +2969,6 @@ export const InventoryPage = () => {
               onChange={(value) =>
                 handleArrayFilterChange('seasonality', value, setSeasonalityFilter)
               }
-
-            />
-            <MultiSelect
-              label="Shopy"
-              data={shopOptions}
-              value={shopFilter}
-              searchable
-              placeholder="Všechny shopy"
-              nothingFoundMessage="Žádné shopy"
-              clearable
-              onChange={(value) => handleArrayFilterChange('shop_id', value, setShopFilter)}
-
-            />
-            <MultiSelect
-              label="Štítky"
-              data={tagFilterOptions}
-              value={tagFilter}
-              searchable
-              placeholder="Vyber štítky"
-              nothingFoundMessage="Žádné štítky"
-              clearable
-              onChange={(value) => handleArrayFilterChange('tag_id', value, setTagFilter)}
-
             />
             <MultiSelect
               label="AI doporučení"
@@ -2779,261 +2983,243 @@ export const InventoryPage = () => {
                   setAiOrderRecommendations(sanitizeAiRecommendations(next))
                 )
               }
-
             />
           </SimpleGrid>
         </div>
-
-        <Group className={classes.actionBar} justify="space-between" align="flex-end" wrap="wrap" gap="md">
-          <Group gap="sm" wrap="wrap" className={classes.actionButtons}>
-            <Button
-              variant="light"
-              leftSection={<IconTag size={16} />}
-              onClick={() => setBulkAssignOpened(true)}
-              disabled={selectedCount === 0}
-            >
-              Přiřadit štítky
-            </Button>
-
-            <Button
-              variant="light"
-              leftSection={<IconTags size={16} />}
-              onClick={() => setTagManagerOpened(true)}
-            >
-              Správa štítků
-            </Button>
-            <Button
-              variant="light"
-              leftSection={<IconSparkles size={16} />}
-              onClick={handleBulkForecast}
-              disabled={selectedCount === 0}
-              loading={forecastBulkMutation.isPending}
-            >
-              Vytvořit AI doporučení
-            </Button>
-          </Group>
-
-          <Group gap="sm" align="flex-end" wrap="wrap">
-            <Button
-              variant="light"
-              leftSection={<IconDownload size={16} />}
-              loading={exporting}
-              onClick={handleExport}
-            >
-              {exportLabel}
-            </Button>
-            <TableToolbar
-              columns={Object.entries(columnLabels).map(([key, label]) => ({ key, label }))}
-              columnVisibility={columnVisibility}
-              onToggleColumn={(key, checked) => {
-                // Stock musí zůstat povolený kvůli logice tabulky
-                if (key === 'stock' && !checked) return;
-                handleColumnVisibilityChange(key as string, checked);
-              }}
-            />
-            <Select
-              label="Na stránku"
-              value={String(pageSize)}
-              onChange={handlePageSizeChange}
-              data={PAGE_SIZE_OPTIONS}
-              w={160}
-            />
-          </Group>
-        </Group>
       </Card>
+      )}
 
       <Card withBorder className={classes.tableCard}>
         <Stack gap="sm">
-          <Group gap="sm" justify="flex-end" wrap="wrap">
-            <Button
-              variant="light"
-              leftSection={<IconDownload size={16} />}
-              loading={exporting}
-              onClick={handleExport}
-            >
-              {exportLabel}
-            </Button>
-            <TableToolbar
-              columns={Object.entries(columnLabels).map(([key, label]) => ({ key, label }))}
-              columnVisibility={columnVisibility}
-              onToggleColumn={(key, checked) => {
-                // Stock musí zůstat povolený kvůli logice tabulky
-                if (key === 'stock' && !checked) return;
-                handleColumnVisibilityChange(key as string, checked);
-              }}
-            />
-            <Select
-              label="Na stránku"
-              value={String(pageSize)}
-              onChange={handlePageSizeChange}
-              data={PAGE_SIZE_OPTIONS}
-              w={160}
-            />
-          </Group>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center" wrap="wrap" className={classes.tableHeader}>
+              <div className={classes.headerTitle}>
+                <Text fw={700} size="lg" c="var(--app-text-primary)">
+                  Přehled seznamu
+                </Text>
+                <Text size="sm" c="var(--app-text-secondary)">
+                  Seznam variant podle aktuálních filtrů.
+                </Text>
+              </div>
+              <div className={classes.pageSizeControl}>
+                <Select
+                  size="xs"
+                  radius="xl"
+                  variant="light"
+                  styles={{
+                    root: { height: 36 },
+                    input: {
+                      height: 36,
+                      paddingInline: '12px',
+                      paddingBlock: '12px',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                    },
+                    section: { marginRight: 6 },
+                  }}
+                  value={String(pageSize)}
+                  onChange={handlePageSizeChange}
+                  data={PAGE_SIZE_OPTIONS}
+                  w={120}
+                  rightSectionWidth={28}
+                  aria-label="Počet na stránku"
+                />
+              </div>
+            </Group>
 
-          <Group gap="sm" justify="space-between" align="center" wrap="wrap" className={classes.selectionSummary}>
-            <Group gap="md" align="center" wrap="wrap">
-              <Text size="sm">
-                Vyhovuje filtrům: {totalCount.toLocaleString('cs-CZ')}
-              </Text>
-              <Text size="sm">
+            <Group gap="xs" wrap="wrap" align="center" className={classes.countsRow}>
+              <Badge color="blue" variant="light" size="xs" radius="xl">
+                Vybrané: {selectedCount.toLocaleString('cs-CZ')}
+              </Badge>
+              <Badge color="gray" variant="light" size="xs" radius="xl">
+                Filtrované: {totalCount.toLocaleString('cs-CZ')}
+              </Badge>
+              <Badge color="gray" variant="light" size="xs" radius="xl">
                 Zobrazeno: {displayedCount.toLocaleString('cs-CZ')}
-              </Text>
-              <Text size="sm">
-                Vybráno (celkem): {selectedCount.toLocaleString('cs-CZ')}
+              </Badge>
+              <Badge color="gray" variant="light" size="xs" radius="xl">
+                Celkem: {totalCount.toLocaleString('cs-CZ')}
+              </Badge>
+              <Badge color="gray" variant="light" size="xs" radius="xl">
+                Na stránce: {pageSize.toLocaleString('cs-CZ')}
+              </Badge>
+            </Group>
+
+            <Group justify="space-between" gap="sm" wrap="wrap" align="center" className={classes.actionBar}>
+              <Group gap="xs" wrap="wrap" align="center" className={classes.actionButtons}>
+                {selectedCount > 0 && (
+                  <Button
+                    variant="filled"
+                    size="xs"
+                    radius="xl"
+                    leftSection={<IconTag size={14} />}
+                    onClick={() => setBulkAssignOpened(true)}
+                  >
+                    Přiřadit štítky
+                  </Button>
+                )}
+                <Button
+                  variant="light"
+                  size="xs"
+                  radius="xl"
+                  leftSection={<IconTags size={14} />}
+                  onClick={() => setTagManagerOpened(true)}
+                >
+                  Správa štítků
+                </Button>
+                <Button
+                  variant="light"
+                  size="xs"
+                  radius="xl"
+                  leftSection={<IconSparkles size={14} />}
+                  onClick={handleBulkForecast}
+                  disabled={selectedCount === 0}
+                  loading={forecastBulkMutation.isPending}
+                >
+                  Vytvořit AI doporučení
+                </Button>
                 {selectedCount > 0 && (
                   <>
-                    {' '}
-                    (na stránce {selectedVisibleCount.toLocaleString('cs-CZ')})
+                    <Button
+                      variant={showSelectedOnly ? 'filled' : 'light'}
+                      size="xs"
+                      radius="xl"
+                      leftSection={<IconListSearch size={14} />}
+                      onClick={() => {
+                        if (showSelectedOnly) {
+                          setShowSelectedOnly(false);
+                        } else if (selectedIds.size > 0) {
+                          setShowSelectedOnly(true);
+                          setPage(1);
+                        }
+                      }}
+                    >
+                      {showSelectedOnly ? 'Zobrazit všechny' : 'Zobrazit vybrané'}
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      radius="xl"
+                      leftSection={<IconX size={14} />}
+                      onClick={clearSelection}
+                    >
+                      Odznačit vše
+                    </Button>
                   </>
                 )}
-              </Text>
+              </Group>
+
+              {showSelectedOnly && selectedCount > 0 && (
+                <Text size="sm" fw={600} c="var(--app-text-secondary)" className={classes.selectedNotice}>
+                  Zobrazeny pouze označené
+                </Text>
+              )}
+
+              <Group gap="xs" align="center" wrap="wrap" className={classes.toolbarActions}>
+                <TableToolbar
+                  columns={Object.entries(columnLabels).map(([key, label]) => ({ key, label }))}
+                  columnVisibility={columnVisibility}
+                  onToggleColumn={(key, checked) => {
+                    if (key === 'stock' && !checked) return;
+                    handleColumnVisibilityChange(key as string, checked);
+                  }}
+                  buttonSize="xs"
+                  radius="xl"
+                />
+                <TableExportAction
+                  totalCount={totalCount}
+                  selectedCount={selectedCount}
+                  onExport={handleExport}
+                  label="Export"
+                  size="xs"
+                  radius="xl"
+                  variant="light"
+                />
+              </Group>
             </Group>
-
-            <Group gap="xs" align="center" wrap="wrap">
-              <Button
-                size="xs"
-                variant={showSelectedOnly ? 'filled' : 'light'}
-                color="teal"
-                leftSection={<IconListSearch size={16} />}
-                disabled={selectedCount === 0 && !showSelectedOnly}
-                onClick={() => {
-                  if (showSelectedOnly) {
-                    setShowSelectedOnly(false);
-                  } else if (selectedIds.size > 0) {
-                    setShowSelectedOnly(true);
-                    setPage(1);
-                  }
-                }}
-              >
-                {showSelectedOnly ? 'Zobrazit všechny' : 'Zobrazit vybrané'}
-              </Button>
-              <Button
-                size="xs"
-                variant="light"
-                onClick={clearSelection}
-                disabled={selectedCount === 0}
-              >
-                Odznačit vše
-              </Button>
-            </Group>
-          </Group>
-
-          <Group gap="sm" wrap="wrap">
-            <Button
-              variant="light"
-              leftSection={<IconTag size={16} />}
-              onClick={() => setBulkAssignOpened(true)}
-              disabled={selectedCount === 0}
-            >
-              Přiřadit štítky
-            </Button>
-
-            <Button
-              variant="light"
-              leftSection={<IconTags size={16} />}
-              onClick={() => setTagManagerOpened(true)}
-            >
-              Správa štítků
-            </Button>
-            <Button
-              variant="light"
-              leftSection={<IconSparkles size={16} />}
-              onClick={handleBulkForecast}
-              disabled={selectedCount === 0}
-              loading={forecastBulkMutation.isPending}
-            >
-              Vytvořit AI doporučení
-            </Button>
-          </Group>
+          </Stack>
         </Stack>
 
-        <ScrollArea offsetScrollbars type="auto" className={classes.tableScroll}>
-          <Table
-            highlightOnHover
-            verticalSpacing="sm"
-            withRowBorders={false}
-            className={classes.dataTable}
-          >
+        <div
+          ref={tableViewportRef}
+          style={{
+            height: tableViewportHeight,
+            maxHeight: '72vh',
+            minHeight: 320,
+            overflowY: 'auto',
+            overflowX: 'auto',
+          }}
+        >
+          <div style={{ minWidth: Math.max(1200, totalTableWidth) }}>
+            <Table
+              highlightOnHover
+              verticalSpacing="sm"
+              withRowBorders={false}
+              className={tableClasses.table}
+              style={{ width: totalTableWidth }}
+            >
               <Table.Thead>
                 <Table.Tr>
-                <Table.Th className={classes.selectionHeader}>
-                  <Checkbox
-                    aria-label="Vybrat všechny varianty na stránce"
-                    checked={variants.length > 0 && allVisibleSelected}
-                    indeterminate={!allVisibleSelected && someVisibleSelected}
-                    onChange={(event) => handleSelectAllVisible(event.currentTarget.checked)}
-                    size="sm"
-                    radius="sm"
-                  />
-                </Table.Th>
-                <SortableHeader label="Kód" column="code" />
-                {columnVisibility.variant && (
-                  <SortableHeader label="Varianta" column="variant" />
-                )}
-                {columnVisibility.product && (
-                  <ResizableHeader label="Produkt" columnKey="product" />
-                )}
-                {columnVisibility.default_category_name && (
-                  <ResizableHeader label="Výchozí kategorie" columnKey="default_category_name" />
-                )}
-                {columnVisibility.seasonality_labels && (
-                  <ResizableHeader label="Roční období" columnKey="seasonality_labels" />
-                )}
-                {columnVisibility.brand && <SortableHeader label="Značka" column="brand" />}
-                {columnVisibility.supplier && (
-                  <SortableHeader label="Dodavatel" column="supplier" />
-                )}
-                {columnVisibility.product_flags && (
-                  <ResizableHeader label="Shoptet štítky" columnKey="product_flags" />
-                )}
-                {columnVisibility.tags && <ResizableHeader label="Štítky" columnKey="tags" />}
-                {columnVisibility.sku && <ResizableHeader label="SKU" columnKey="sku" />}
-                {columnVisibility.ean && <ResizableHeader label="EAN" columnKey="ean" />}
-                <ResizableHeader label="Stav" columnKey="status" />
-                {columnVisibility.ai_insight && (
-                  <ResizableHeader label="AI doporučení" columnKey="ai_insight" />
-                )}
-                {columnVisibility.stock && <SortableHeader label="Zásoba" column="stock" />}
-                {columnVisibility.ordered && (
-                  <SortableHeader label="Objednáno" column="ordered" />
-                )}
-                {columnVisibility.min_stock_supply && (
-                  <SortableHeader label="Min. zásoba" column="min_stock_supply" />
-                )}
-                {columnVisibility.price && <SortableHeader label="Cena" column="price" />}
-                {columnVisibility.purchase_price && (
-                  <SortableHeader label="Nákupní cena" column="purchase_price" />
-                )}
-                {columnVisibility.lifetime_revenue && (
-                  <SortableHeader label="Lifetime obrat" column="lifetime_revenue" />
-                )}
-                {columnVisibility.last_30_quantity && (
-                  <SortableHeader label="Prodeje (30 dní)" column="last_30_quantity" />
-                )}
-                {columnVisibility.average_daily_sales && (
-                  <SortableHeader label="Denní poptávka" column="average_daily_sales" />
-                )}
-                {columnVisibility.stock_runway_days && (
-                  <SortableHeader label="Výdrž zásoby" column="stock_runway_days" />
-                )}
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {isLoading && (
-                <Table.Tr>
-                  <Table.Td colSpan={visibleColumnCount}>Načítám…</Table.Td>
-                </Table.Tr>
-              )}
+                  <Table.Th className={tableClasses.selectionHeader}>
+                    <Checkbox
+                      aria-label="Vybrat všechny varianty na stránce"
+                      checked={tableRows.length > 0 && allVisibleSelected}
+                      indeterminate={!allVisibleSelected && someVisibleSelected}
+                      onChange={(event) => handleSelectAllVisible(event.currentTarget.checked)}
+                      size="sm"
+                      radius="sm"
+                    />
+                  </Table.Th>
+                  {headerColumns.map((column) => {
+                    const width = COLUMN_WIDTH_KEYS.includes(column.key as ResizableColumnKey)
+                      ? getColumnWidth(column.key as ResizableColumnKey)
+                      : undefined;
 
-              {!isLoading && variants.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={visibleColumnCount}>Žádné varianty neodpovídají filtrům.</Table.Td>
-                </Table.Tr>
-              )}
+                    const sortable = Boolean(column.sortable);
 
-              {variants.map((variant) => {
-                const statusDefinition = statusMeta[variant.stock_status];
+                    return (
+                      <DataTableHeaderCell
+                        key={column.key}
+                        column={column}
+                        sortState={headerSortState}
+                        onToggleSort={
+                          sortable
+                            ? (col) => handleHeaderSort(col as SortableColumn)
+                            : undefined
+                        }
+                        width={width}
+                      />
+                    );
+                  })}
+                </Table.Tr>
+              </Table.Thead>
+      {isLoading && (
+        <Table.Tbody>
+          <Table.Tr>
+            <Table.Td colSpan={visibleColumnCount}>Načítám…</Table.Td>
+          </Table.Tr>
+        </Table.Tbody>
+      )}
+
+      {!isLoading && tableRows.length === 0 && (
+        <Table.Tbody>
+          <Table.Tr>
+            <Table.Td colSpan={visibleColumnCount}>Žádné varianty neodpovídají filtrům.</Table.Td>
+          </Table.Tr>
+        </Table.Tbody>
+      )}
+
+      {!isLoading && tableRows.length > 0 && (
+        <Table.Tbody
+          className={tableClasses.body}
+          style={{
+            height: totalVirtualHeight,
+          }}
+        >
+      {virtualRows.map((virtualRow) => {
+        const variant = tableRows[virtualRow.index];
+                const statusKey = (variant.stock_status ?? 'unknown') as InventoryVariant['stock_status'];
+                const statusDefinition = statusMeta[statusKey];
                 const stockValue = toNumber(variant.stock);
                 const minStockValue = toNumber(variant.min_stock_supply);
                 const priceValue = toNumber(variant.price);
@@ -3073,7 +3259,6 @@ export const InventoryPage = () => {
                   stockRunway !== null ? formatNumber(stockRunway, 1) : null;
                 const aiOrderRecommendation = variant.ai_order_recommendation ?? null;
                 const aiDeadlineDays = variant.ai_reorder_deadline_days ?? null;
-                const aiRecommendedQuantity = variant.ai_recommended_order_quantity ?? null;
                 const aiProductHealth = variant.ai_product_health ?? null;
                 const aiOrderLabel = aiOrderRecommendation
                   ? aiOrderRecommendationLabels[aiOrderRecommendation]
@@ -3082,7 +3267,6 @@ export const InventoryPage = () => {
                   ? aiOrderRecommendationColors[aiOrderRecommendation]
                   : 'gray';
                 const aiDeadlineLabel = formatAiDeadlineLabel(aiDeadlineDays);
-                const aiQuantityLabel = formatAiQuantityLabel(aiRecommendedQuantity);
                 const aiHealthLabel = aiProductHealth
                   ? aiProductHealthLabels[aiProductHealth]
                   : null;
@@ -3090,7 +3274,6 @@ export const InventoryPage = () => {
                   ? aiProductHealthColors[aiProductHealth]
                   : 'gray';
                 const aiSeasonalitySummary = variant.ai_seasonality_summary ?? null;
-                const aiSeasonalityBestPeriod = variant.ai_seasonality_best_period ?? null;
                 const aiLastForecastLabel = variant.ai_last_forecast_at
                   ? new Date(variant.ai_last_forecast_at).toLocaleString('cs-CZ')
                   : null;
@@ -3099,6 +3282,17 @@ export const InventoryPage = () => {
                 return (
                   <Table.Tr
                     key={variant.id}
+                    ref={rowVirtualizer.measureElement}
+                    data-index={virtualRow.index}
+                    className={tableClasses.virtualRow}
+                    style={{
+                      position: 'absolute',
+                      top: virtualRow.start,
+                      left: 0,
+                      right: 0,
+                      height: virtualRow.size,
+                      cursor: 'pointer',
+                    }}
                     onClick={() => navigate(`/inventory/variants/${variant.id}`)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -3107,10 +3301,9 @@ export const InventoryPage = () => {
                       }
                     }}
                     tabIndex={0}
-                    style={{ cursor: 'pointer' }}
                   >
                     <Table.Td
-                      className={classes.selectionCell}
+                      className={tableClasses.selectionCell}
                       onClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => event.stopPropagation()}
                     >
@@ -3125,47 +3318,44 @@ export const InventoryPage = () => {
                             | PointerEvent
                             | KeyboardEvent
                             | TouchEvent;
-                          handleSelectVariant(variant.id, event.currentTarget.checked, {
-                            shiftKey: Boolean(nativeEvent.shiftKey),
-                          });
-                        }}
+                        handleSelectVariant(variant, event.currentTarget.checked, {
+                          shiftKey: Boolean(nativeEvent.shiftKey),
+                        });
+                      }}
                       />
                     </Table.Td>
-                    <Table.Td style={getColumnStyle('code')}>
+                    <Table.Td className={tableClasses.cell} style={getColumnStyle('code')}>
                       <Text fw={600}>{variant.code}</Text>
-                      {variant.product?.external_guid && (
-                        <Text size="xs" c="var(--app-text-tertiary)">
-                          {variant.product.external_guid}
-                        </Text>
-                      )}
+                      {variant.product?.external_guid &&
+                        renderTruncatedText(variant.product.external_guid, 'xs')}
                     </Table.Td>
                     {columnVisibility.variant && (
-                      <Table.Td style={getColumnStyle('variant')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('variant')}>
                         <Text fw={500}>{resolveVariantName(variant)}</Text>
-                        {variant.unit && (
-                        <Text size="xs" c="var(--app-text-tertiary)">
-                          Jednotka: {variant.unit}
-                        </Text>
-                        )}
+                        {variant.unit &&
+                          renderTruncatedText(`Jednotka: ${variant.unit}`, 'xs')}
                       </Table.Td>
                     )}
                     {columnVisibility.product && (
-                      <Table.Td style={getColumnStyle('product')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('product')}>
                         <Text fw={500}>{resolveProductName(variant)}</Text>
-                        {variant.product?.sku && (
-                        <Text size="xs" c="var(--app-text-tertiary)">
-                          SKU produktu: {variant.product.sku}
-                        </Text>
-                        )}
+                        {variant.product?.sku &&
+                          renderTruncatedText(`SKU produktu: ${variant.product.sku}`, 'xs')}
                       </Table.Td>
                     )}
                     {columnVisibility.default_category_name && (
-                      <Table.Td style={getColumnStyle('default_category_name')}>
+                      <Table.Td
+                        className={tableClasses.cell}
+                        style={getColumnStyle('default_category_name')}
+                      >
                         {defaultCategory ?? '—'}
                       </Table.Td>
                     )}
                     {columnVisibility.seasonality_labels && (
-                      <Table.Td style={getColumnStyle('seasonality_labels')}>
+                      <Table.Td
+                        className={tableClasses.cell}
+                        style={getColumnStyle('seasonality_labels')}
+                      >
                         {seasonalityLabels.length === 0 ? (
                           '—'
                         ) : (
@@ -3180,22 +3370,23 @@ export const InventoryPage = () => {
                       </Table.Td>
                     )}
                     {columnVisibility.brand && (
-                      <Table.Td style={getColumnStyle('brand')}>
-                        {resolveBrand(variant) ?? '—'}
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('brand')}>
+                        {renderTruncatedText(resolveBrand(variant) ?? '—')}
                       </Table.Td>
                     )}
                     {columnVisibility.supplier && (
-                      <Table.Td style={getColumnStyle('supplier')}>
-                        {resolveSupplier(variant) ?? '—'}
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('supplier')}>
+                        {renderTruncatedText(resolveSupplier(variant) ?? '—')}
                       </Table.Td>
                     )}
                     {columnVisibility.product_flags && (
-                      <Table.Td style={getColumnStyle('product_flags')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('product_flags')}>
                         <VariantFlagsCell flags={variant.product_flags ?? []} />
                       </Table.Td>
                     )}
                     {columnVisibility.tags && (
                       <Table.Td
+                        className={tableClasses.cell}
                         style={getColumnStyle('tags')}
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => event.stopPropagation()}
@@ -3209,62 +3400,53 @@ export const InventoryPage = () => {
                       </Table.Td>
                     )}
                     {columnVisibility.sku && (
-                      <Table.Td style={getColumnStyle('sku')}>{variant.sku ?? '—'}</Table.Td>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('sku')}>
+                        {variant.sku ?? '—'}
+                      </Table.Td>
                     )}
                     {columnVisibility.ean && (
-                      <Table.Td style={getColumnStyle('ean')}>{variant.ean ?? '—'}</Table.Td>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('ean')}>
+                        {variant.ean ?? '—'}
+                      </Table.Td>
                     )}
-                    <Table.Td style={getColumnStyle('status')}>
+                    <Table.Td className={tableClasses.cell} style={getColumnStyle('status')}>
                       <Badge color={statusDefinition.color}>{statusDefinition.label}</Badge>
                     </Table.Td>
                     {columnVisibility.ai_insight && (
-                      <Table.Td style={getColumnStyle('ai_insight')}>
-                        <Stack gap={4}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('ai_insight')}>
+                        <Group gap={6} wrap="wrap" className={classes.aiCell}>
                           {aiOrderLabel ? (
-                            <Badge color={aiOrderColor}>{aiOrderLabel}</Badge>
+                            <Tooltip
+                              withinPortal
+                              multiline
+                              label={[
+                                aiDeadlineLabel ? `Objednat do: ${aiDeadlineLabel}` : null,
+                                aiProductHealthReason,
+                                aiSeasonalitySummary,
+                                aiLastForecastLabel,
+                              ]
+                                .filter(Boolean)
+                                .join('\n')}
+                            >
+                              <Badge color={aiOrderColor}>{aiOrderLabel}</Badge>
+                            </Tooltip>
                           ) : (
-                            <Text size="sm" c="var(--app-text-tertiary)">
+                            <Badge variant="light" color="gray">
                               Bez doporučení
-                            </Text>
-                          )}
-                          <Text size="xs" c="var(--app-text-tertiary)">
-                            Objednat do: {aiDeadlineLabel}
-                          </Text>
-                          {aiQuantityLabel && (
-                            <Text size="xs" c="var(--app-text-tertiary)">
-                              Doporučené množství: {aiQuantityLabel}
-                            </Text>
-                          )}
-                          {aiHealthLabel && (
-                            <Badge color={aiHealthColor} variant="light">
-                              {aiHealthLabel}
                             </Badge>
                           )}
-                          {aiProductHealthReason && (
-                            <Text size="xs" c="var(--app-text-tertiary)">
-                              {aiProductHealthReason}
-                            </Text>
+                          {aiHealthLabel && (
+                            <Tooltip withinPortal label={`Poptávka: ${aiHealthLabel}`}>
+                              <Badge color={aiHealthColor} variant="light">
+                                {aiHealthLabel}
+                              </Badge>
+                            </Tooltip>
                           )}
-                          {aiSeasonalitySummary && (
-                            <Text size="xs" c="var(--app-text-tertiary)">
-                              Sezóna: {aiSeasonalitySummary}
-                            </Text>
-                          )}
-                          {aiSeasonalityBestPeriod && (
-                            <Text size="xs" c="var(--app-text-tertiary)">
-                              Nejlepší období: {aiSeasonalityBestPeriod}
-                            </Text>
-                          )}
-                          {aiLastForecastLabel && (
-                            <Text size="xs" c="var(--app-text-tertiary)">
-                              Odhad: {aiLastForecastLabel}
-                            </Text>
-                          )}
-                        </Stack>
+                        </Group>
                       </Table.Td>
                     )}
                     {columnVisibility.stock && (
-                      <Table.Td style={getColumnStyle('stock')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('stock')}>
                         <Stack gap={2} align="flex-start">
                           <Text fw={500}>
                             {stockLabel}
@@ -3279,7 +3461,7 @@ export const InventoryPage = () => {
                       </Table.Td>
                     )}
                     {columnVisibility.ordered && (
-                      <Table.Td style={getColumnStyle('ordered')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('ordered')}>
                         {hasOrderedQuantity ? (
                           <div className={classes.orderedCell}>
                             <Text fw={600}>{formatNumber(orderedQuantity, 0)} ks</Text>
@@ -3301,48 +3483,49 @@ export const InventoryPage = () => {
                       </Table.Td>
                     )}
                     {columnVisibility.min_stock_supply && (
-                      <Table.Td style={getColumnStyle('min_stock_supply')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('min_stock_supply')}>
                         {minStockLabel}
                       </Table.Td>
                     )}
                     {columnVisibility.price && (
-                      <Table.Td style={getColumnStyle('price')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('price')}>
                         {formatPrice(priceValue, resolveVariantCurrency(variant))}
                       </Table.Td>
                     )}
                     {columnVisibility.purchase_price && (
-                      <Table.Td style={getColumnStyle('purchase_price')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('purchase_price')}>
                         {formatPrice(purchasePriceValue, resolveVariantCurrency(variant))}
                       </Table.Td>
                     )}
                     {columnVisibility.lifetime_revenue && (
-                      <Table.Td style={getColumnStyle('lifetime_revenue')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('lifetime_revenue')}>
                         {formatPrice(lifetimeRevenue, resolveVariantCurrency(variant))}
                       </Table.Td>
                     )}
                     {columnVisibility.last_30_quantity && (
-                      <Table.Td style={getColumnStyle('last_30_quantity')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('last_30_quantity')}>
                         {last30Quantity !== null ? `${formatNumber(last30Quantity, 0)} ks` : '—'}
                       </Table.Td>
                     )}
                     {columnVisibility.average_daily_sales && (
-                      <Table.Td style={getColumnStyle('average_daily_sales')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('average_daily_sales')}>
                         {averageDailySales && averageDailySales > 0
                           ? `${averageDailySales.toFixed(2)} ks/den`
                           : '—'}
                       </Table.Td>
                     )}
                     {columnVisibility.stock_runway_days && (
-                      <Table.Td style={getColumnStyle('stock_runway_days')}>
+                      <Table.Td className={tableClasses.cell} style={getColumnStyle('stock_runway_days')}>
                         <Stack gap={2} align="flex-start">
-                          <Text fw={500}>
-                            {stockRunwayLabel ? `${stockRunwayLabel} dnů` : '—'}
-                          </Text>
-                          {runwayDeltaLabel && (
-                            <Text size="xs" c="var(--app-text-tertiary)">
-                              (+ {runwayDeltaLabel} dnů s objednaným množstvím)
+                          {renderTruncatedText(
+                            stockRunwayLabel ? `${stockRunwayLabel} dnů` : '—'
+                          ) || (
+                            <Text fw={500} className={classes.truncate}>
+                              —
                             </Text>
                           )}
+                          {runwayDeltaLabel &&
+                            renderTruncatedText(`(+ ${runwayDeltaLabel} dnů s objednaným množstvím)`, 'xs')}
                         </Stack>
                       </Table.Td>
                     )}
@@ -3350,12 +3533,16 @@ export const InventoryPage = () => {
                 );
               })}
             </Table.Tbody>
+            )}
           </Table>
-        </ScrollArea>
-
-        <div className={classes.paginationRow}>
-          <Pagination value={page} onChange={handlePageChange} total={data?.last_page ?? 1} />
+          </div>
         </div>
+
+        {!showSelectedOnly && (
+          <div className={classes.paginationRow}>
+            <Pagination value={page} onChange={handlePageChange} total={data?.last_page ?? 1} />
+          </div>
+        )}
       </Card>
 
       <TagManagerModal

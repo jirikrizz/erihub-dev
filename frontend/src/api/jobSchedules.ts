@@ -80,3 +80,8 @@ export const updateJobSchedule = async (id: string, payload: JobScheduleUpdatePa
 export const deleteJobSchedule = async (id: string) => {
   await api.delete(`/settings/job-schedules/${id}`);
 };
+
+export const runJobSchedule = async (id: string) => {
+  const { data } = await api.post<JobSchedule>(`/settings/job-schedules/${id}/run`);
+  return data;
+};

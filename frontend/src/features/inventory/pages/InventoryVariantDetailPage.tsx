@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Button,
+  Box,
   Grid,
   Group,
   Loader,
@@ -845,6 +846,14 @@ export const InventoryVariantDetailPage = () => {
           .join(', ');
   const perShopSales = sales.per_shop ?? [];
   const metricsCurrency = sales.currency_code ?? variant.metrics_currency_code ?? variant.currency_code;
+  const priceCurrency = variant.pricing?.currency_code ?? metricsCurrency ?? variant.currency_code;
+  const basePrice = variant.pricing?.base_price ?? variant.price;
+  const effectivePrice = variant.pricing?.effective_price ?? basePrice;
+  const actionPriceActive =
+    Boolean(variant.pricing?.is_action_price_active) && variant.pricing?.action_price !== null;
+  const actionPriceValue = actionPriceActive ? variant.pricing?.action_price ?? null : null;
+  const displayPrice =
+    actionPriceActive && actionPriceValue !== null ? actionPriceValue : effectivePrice ?? basePrice;
 
   const runwayLabel = sales.stock_runway_days
     ? `${Math.max(sales.stock_runway_days, 0).toFixed(1)} dnů`
@@ -1796,8 +1805,26 @@ export const InventoryVariantDetailPage = () => {
               <Text size="sm">Jednotka: {variant.unit ?? '—'}</Text>
               <Text size="sm">Zásoba: {formatNumber(variant.stock, 2)}</Text>
               <Text size="sm">Minimální zásoba: {formatNumber(variant.min_stock_supply, 2)}</Text>
-              <Text size="sm">Prodejní cena: {formatPrice(variant.price, metricsCurrency ?? variant.currency_code)}</Text>
-              <Text size="sm">Nákupní cena: {formatPrice(variant.purchase_price, metricsCurrency ?? variant.currency_code)}</Text>
+              <Group gap="xs">
+                <Text size="sm">Prodejní cena:</Text>
+                <Group gap="xs">
+                  {actionPriceActive && basePrice !== null ? (
+                    <Text size="sm" c="dimmed" td="line-through">
+                      {formatPrice(basePrice, priceCurrency)}
+                    </Text>
+                  ) : null}
+                  <Text size="sm" fw={actionPriceActive ? 600 : undefined}>
+                    {formatPrice(displayPrice, priceCurrency)}
+                  </Text>
+                </Group>
+              </Group>
+              {actionPriceActive && variant.pricing?.action_price_from && variant.pricing?.action_price_to ? (
+                <Text size="xs" c="dimmed">
+                  Akce: {variant.pricing.action_price_from.slice(0, 10)} –{' '}
+                  {variant.pricing.action_price_to.slice(0, 10)}
+                </Text>
+              ) : null}
+              <Text size="sm">Nákupní cena: {formatPrice(variant.purchase_price, priceCurrency)}</Text>
               <Text size="sm">
                 Poslední prodej:{' '}
                 {lastSaleRelative ?? '—'}
@@ -1883,30 +1910,34 @@ export const InventoryVariantDetailPage = () => {
         <Title order={4} mb="sm">
           Trend prodaných kusů (posledních 120 dní)
         </Title>
-        <AreaChart
-          h={260}
-          data={sales.trend.map((item) => ({ ...item, quantity: Number(item.quantity) }))}
-          dataKey="date"
-          series={[{ name: 'quantity', label: 'Prodáno ks', color: 'teal.5' }]}
-          curveType="monotone"
-          withLegend
-          withDots={false}
-        />
+        <Box style={{ minHeight: 260, minWidth: 0 }}>
+          <AreaChart
+            h={260}
+            data={sales.trend.map((item) => ({ ...item, quantity: Number(item.quantity) }))}
+            dataKey="date"
+            series={[{ name: 'quantity', label: 'Prodáno ks', color: 'teal.5' }]}
+            curveType="monotone"
+            withLegend
+            withDots={false}
+          />
+        </Box>
       </SurfaceCard>
 
       <SurfaceCard>
         <Title order={4} mb="sm">
           Trend obratu (posledních 120 dní)
         </Title>
-        <AreaChart
-          h={260}
-          data={sales.trend.map((item) => ({ ...item, revenue: Number(item.revenue) }))}
-          dataKey="date"
-          series={[{ name: 'revenue', label: 'Obrat (s DPH)', color: 'indigo.5' }]}
-          curveType="monotone"
-          withLegend
-          withDots={false}
-        />
+        <Box style={{ minHeight: 260, minWidth: 0 }}>
+          <AreaChart
+            h={260}
+            data={sales.trend.map((item) => ({ ...item, revenue: Number(item.revenue) }))}
+            dataKey="date"
+            series={[{ name: 'revenue', label: 'Obrat (s DPH)', color: 'indigo.5' }]}
+            curveType="monotone"
+            withLegend
+            withDots={false}
+          />
+        </Box>
       </SurfaceCard>
 
       {compareMode && perShopSales.length > 0 && (
@@ -1988,19 +2019,21 @@ export const InventoryVariantDetailPage = () => {
                       </Text>
                     </Group>
 
-                    <AreaChart
-                      h={200}
-                      data={entry.trend.map((item) => ({
-                        ...item,
-                        quantity: Number(item.quantity),
-                      }))}
-                      dataKey="date"
-                      series={[{ name: 'quantity', label: 'Prodáno ks', color: 'teal.6' }]}
-                      curveType="monotone"
-                      withLegend
-                    withDots={false}
-                  />
-                </Stack>
+                    <Box style={{ minHeight: 200, minWidth: 0 }}>
+                      <AreaChart
+                        h={200}
+                        data={entry.trend.map((item) => ({
+                          ...item,
+                          quantity: Number(item.quantity),
+                        }))}
+                        dataKey="date"
+                        series={[{ name: 'quantity', label: 'Prodáno ks', color: 'teal.6' }]}
+                        curveType="monotone"
+                        withLegend
+                        withDots={false}
+                      />
+                    </Box>
+                  </Stack>
                 </SurfaceCard>
               );
             })}

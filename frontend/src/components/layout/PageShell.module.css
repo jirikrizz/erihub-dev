@@ -33,7 +33,7 @@
 }
 
 [data-theme='dark'] .description {
-  color: rgba(18, 24, 36, 0.86);
+  color: var(--app-text-secondary);
 }
 
 .actions {

@@ -24,12 +24,13 @@ class OrderSyncService
      *     orders_count: int
      * }
      */
-    public function sync(Shop $shop, CarbonImmutable $from, CarbonImmutable $to, int $itemsPerPage = 50): array
+    public function sync(Shop $shop, CarbonImmutable $from, CarbonImmutable $to, int $itemsPerPage = 200): array
     {
         $page = 1;
         $lastChangeTime = null;
         $ordersProcessed = 0;
         $variantIds = collect();
+        $maxPages = 2000;
 
         do {
             $response = $this->client->listOrders($shop, [
@@ -43,6 +44,13 @@ class OrderSyncService
                 ->filter(fn ($row) => is_array($row));
 
             $countThisPage = $orders->count();
+            $paginator = Arr::get($response, 'data.paginator', []);
+            $perPageFromPaginator = $this->paginatorValue($paginator, ['per_page', 'perPage', 'items_per_page', 'itemsPerPage'], null);
+            $itemsOnPage = $this->paginatorValue($paginator, ['items_on_page', 'itemsOnPage'], null);
+            $perPage = $itemsOnPage ?? $perPageFromPaginator ?? $itemsPerPage;
+            $perPage = $perPage > 0 ? $perPage : $itemsPerPage;
+            $pageCount = $this->paginatorValue($paginator, ['page_count', 'pageCount'], null);
+            $currentPage = $this->paginatorValue($paginator, ['page', 'pageNumber'], $page);
 
             if ($countThisPage === 0) {
                 break;
@@ -80,20 +88,15 @@ class OrderSyncService
                 }
             });
 
-            $paginator = Arr::get($response, 'data.paginator', []);
-            $total = (int) ($paginator['total'] ?? $orders->count());
-            $perPage = (int) ($paginator['per_page'] ?? $itemsPerPage);
-            if ($perPage <= 0) {
-                $perPage = $itemsPerPage;
-            }
+            $hasMore = $pageCount !== null
+                ? $currentPage < $pageCount
+                : ($countThisPage >= $perPage);
 
-            $pageCount = (int) ($paginator['page_count'] ?? (int) ceil(max($total, 1) / max($perPage, 1)));
-            $currentPage = (int) ($paginator['page'] ?? $page);
-            if ($currentPage >= $pageCount) {
+            if (! $hasMore || $page >= $maxPages) {
                 break;
             }
 
-            $page = $currentPage + 1;
+            $page++;
         } while (true);
 
         return [
@@ -101,5 +104,16 @@ class OrderSyncService
             'variant_ids' => $variantIds->unique()->values()->all(),
             'orders_count' => $ordersProcessed,
         ];
+    }
+
+    private function paginatorValue(array $paginator, array $keys, ?int $default = null): ?int
+    {
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $paginator) && is_numeric($paginator[$key])) {
+                return (int) $paginator[$key];
+            }
+        }
+
+        return $default;
     }
 }

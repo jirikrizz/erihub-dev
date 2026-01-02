@@ -15,6 +15,7 @@ use Modules\Orders\Services\OrderSnapshotImporter;
 use Modules\Pim\Services\ProductSnapshotImporter;
 use Modules\Shoptet\Models\ShoptetWebhookJob;
 use Modules\Shoptet\Models\Shop;
+use Modules\Shoptet\Models\FailedSnapshot;
 use Modules\Shoptet\Services\SnapshotPipelineService;
 
 class ProcessShoptetSnapshot implements ShouldQueue
@@ -27,9 +28,14 @@ class ProcessShoptetSnapshot implements ShouldQueue
     public int $timeout = 7200;
 
     /**
-     * Avoid reprocessing the same snapshot multiple times when it runs long.
+     * Allow 3 retry attempts with exponential backoff before permanent failure.
      */
-    public int $tries = 1;
+    public int $tries = 3;
+
+    /**
+     * Exponential backoff: 1 min, 5 mins, 30 mins
+     */
+    public array $backoff = [60, 300, 1800];
 
     public function __construct(private readonly ShoptetWebhookJob $webhookJob)
     {
@@ -197,6 +203,42 @@ class ProcessShoptetSnapshot implements ShouldQueue
                     'endpoint' => $endpoint,
                 ]);
                 return [];
+        }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('ProcessShoptetSnapshot failed, tracking for retry', [
+            'webhook_job_id' => $this->webhookJob->id,
+            'attempt' => $this->attempts(),
+            'exception' => $exception->getMessage(),
+        ]);
+
+        // Only create failed snapshot record on final failure (after all retries)
+        if ($this->attempts() >= $this->tries) {
+            FailedSnapshot::updateOrCreate(
+                ['webhook_job_id' => $this->webhookJob->id],
+                [
+                    'shop_id' => $this->webhookJob->shop_id,
+                    'endpoint' => $this->webhookJob->endpoint,
+                    'status' => 'pending',
+                    'retry_count' => 0,
+                    'max_retries' => 3,
+                    'error_message' => $exception->getMessage(),
+                    'context' => [
+                        'snapshot_path' => $this->webhookJob->snapshot_path,
+                        'pipeline_id' => $this->webhookJob->meta['pipeline_id'] ?? null,
+                    ],
+                ]
+            );
+
+            $this->webhookJob->update([
+                'status' => 'failed',
+                'meta' => array_merge($this->webhookJob->meta ?? [], [
+                    'failed_at' => now()->toIso8601String(),
+                    'error' => $exception->getMessage(),
+                ]),
+            ]);
         }
     }
 }

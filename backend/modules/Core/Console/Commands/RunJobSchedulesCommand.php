@@ -97,6 +97,7 @@ class RunJobSchedulesCommand extends Command
             'inventory.stock_guard_sync' => $this->dispatchInventoryStockGuard($schedule),
             'inventory.generate_recommendations' => $this->dispatchInventoryRecommendations($schedule),
             'orders.refresh_statuses' => $this->dispatchOrderStatusRefresh($schedule),
+            'orders.refresh_statuses_deep' => $this->dispatchOrderStatusRefresh($schedule),
             default => $this->markUnsupported($schedule),
         };
     }

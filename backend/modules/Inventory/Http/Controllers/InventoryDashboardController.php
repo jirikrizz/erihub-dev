@@ -95,6 +95,8 @@ class InventoryDashboardController extends Controller
             $variant->setAttribute('default_category_name', $this->resolveDefaultCategoryName($variant));
             $variant->setAttribute('seasonality_labels', $this->extractSeasonalityLabels($variant));
 
+            $this->trimVariantPayload($variant);
+
             return $variant;
         });
 
@@ -286,7 +288,7 @@ class InventoryDashboardController extends Controller
             'product' => fn ($relation) => $relation
                 ->select('id', 'shop_id', 'external_guid', 'sku', 'status', 'base_payload', 'base_locale')
                 ->with([
-                    'shop:id,currency_code,name,domain',
+                    'shop:id,currency_code,name,domain,timezone,is_master',
                     'variants' => fn ($query) => $query
                         ->select([
                             'product_variants.id',
@@ -386,6 +388,10 @@ class InventoryDashboardController extends Controller
             'related_products',
             InventoryVariantContext::enrichRelatedProducts($context['related_products'])
         );
+
+        if ($pricing = $this->buildMasterShopPricing($variant)) {
+            $variant->setAttribute('pricing', $pricing);
+        }
 
         return response()->json([
             'variant' => $variant,
@@ -918,7 +924,6 @@ class InventoryDashboardController extends Controller
                 'product' => fn ($relation) => $relation
                     ->select('id', 'shop_id', 'external_guid', 'sku', 'status', 'base_payload')
                     ->with('shop:id,currency_code,name,domain'),
-                'overlays.shop:id,currency_code,name,domain',
                 'tags:id,name,color',
             ]);
 
@@ -1298,6 +1303,73 @@ class InventoryDashboardController extends Controller
         return $result;
     }
 
+    private function trimVariantPayload(ProductVariant $variant): void
+    {
+        if ($variant->relationLoaded('overlays')) {
+            $variant->unsetRelation('overlays');
+        }
+
+        $variant->setAttribute(
+            'data',
+            $this->trimPayload($variant->getAttribute('data'), $this->variantDataWhitelist())
+        );
+
+        if ($variant->relationLoaded('product') && $variant->product) {
+            $variant->product->setAttribute(
+                'base_payload',
+                $this->trimPayload($variant->product->getAttribute('base_payload'), $this->productPayloadWhitelist())
+            );
+        }
+    }
+
+    private function trimPayload(mixed $payload, array $allowedKeys): ?array
+    {
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        $allowed = array_flip($allowedKeys);
+
+        return array_intersect_key($payload, $allowed);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function variantDataWhitelist(): array
+    {
+        return [
+            'name',
+            'label',
+            'brand',
+            'supplier',
+            'unit',
+            'availability',
+            'availabilityWhenSoldOut',
+            'attributeCombination',
+            'variantParameters',
+            'parameters',
+            'defaultCategory',
+            'allCategories',
+            'filteringParameters',
+            'flags',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function productPayloadWhitelist(): array
+    {
+        return [
+            'name',
+            'brand',
+            'supplier',
+            'defaultCategory',
+            'allCategories',
+        ];
+    }
+
     /**
      * @return array{stock: float|null, min_stock_supply: float|null, shop_id: int|null}
      */
@@ -1345,6 +1417,142 @@ class InventoryDashboardController extends Controller
             $name = trim($defaultCategory);
 
             return $name !== '' ? $name : null;
+        }
+
+        return null;
+    }
+
+    private function buildMasterShopPricing(ProductVariant $variant): ?array
+    {
+        $preferredShopId = $variant->product?->shop_id;
+
+        $overlays = $variant->overlays ?? collect();
+
+        $preferredOverlay = $overlays
+            ->filter(fn ($overlay) => $overlay->relationLoaded('shop') && $overlay->shop?->is_master)
+            ->first();
+
+        if (! $preferredOverlay && $preferredShopId) {
+            $preferredOverlay = $overlays->firstWhere('shop_id', $preferredShopId);
+        }
+
+        if (! $preferredOverlay) {
+            return null;
+        }
+
+        $shop = $preferredOverlay->shop ?? $variant->product?->shop;
+        $timezone = $shop?->timezone ?: config('app.timezone');
+        $currency = $preferredOverlay->currency_code ?? $shop?->currency_code ?? $variant->currency_code;
+
+        $pricingRow = $this->extractDefaultPricelistPrice((array) ($preferredOverlay->data ?? []), $timezone);
+        if (! $pricingRow) {
+            return null;
+        }
+
+        $basePrice = $pricingRow['base_price'];
+        $actionPrice = $pricingRow['action_price'];
+        $from = $pricingRow['action_price_from'];
+        $to = $pricingRow['action_price_to'];
+
+        $now = CarbonImmutable::now($timezone);
+        $actionActive = $actionPrice !== null && $this->isActionPriceActive($now, $from, $to);
+
+        return [
+            'currency_code' => $currency,
+            'base_price' => $basePrice,
+            'action_price' => $actionPrice,
+            'action_price_from' => $from?->toIso8601String(),
+            'action_price_to' => $to?->toIso8601String(),
+            'is_action_price_active' => $actionActive,
+            'effective_price' => $actionActive ? $actionPrice : $basePrice,
+            'pricelist_id' => $pricingRow['pricelist_id'],
+            'source' => 'master_shop_pricelist',
+        ];
+    }
+
+    private function extractDefaultPricelistPrice(array $data, string $timezone): ?array
+    {
+        $rows = collect(Arr::get($data, 'perPricelistPrices', []))
+            ->filter(fn ($row) => is_array($row));
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $selected = $rows->firstWhere('pricelistId', 1) ?? $rows->first();
+
+        if (! $selected) {
+            return null;
+        }
+
+        $priceData = Arr::get($selected, 'price', []);
+        $basePrice = $this->toFloat(Arr::get($priceData, 'price'));
+        $actionPriceData = Arr::get($priceData, 'actionPrice');
+
+        $actionPrice = is_array($actionPriceData)
+            ? $this->toFloat(Arr::get($actionPriceData, 'price'))
+            : null;
+
+        $actionFrom = is_array($actionPriceData) ? $this->parseDate(Arr::get($actionPriceData, 'fromDate'), $timezone, true) : null;
+        $actionTo = is_array($actionPriceData) ? $this->parseDate(Arr::get($actionPriceData, 'toDate'), $timezone, false, true) : null;
+
+        return [
+            'pricelist_id' => Arr::get($selected, 'pricelistId'),
+            'base_price' => $basePrice,
+            'action_price' => $actionPrice,
+            'action_price_from' => $actionFrom,
+            'action_price_to' => $actionTo,
+        ];
+    }
+
+    private function parseDate(?string $value, string $timezone, bool $startOfDay = false, bool $endOfDay = false): ?CarbonImmutable
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            $date = CarbonImmutable::parse($value, $timezone);
+        } catch (\Exception $e) {
+            return null;
+        }
+
+        if ($startOfDay) {
+            return $date->startOfDay();
+        }
+
+        if ($endOfDay) {
+            return $date->endOfDay();
+        }
+
+        return $date;
+    }
+
+    private function isActionPriceActive(CarbonImmutable $now, ?CarbonImmutable $from, ?CarbonImmutable $to): bool
+    {
+        if ($from && $now->lt($from)) {
+            return false;
+        }
+
+        if ($to && $now->gt($to)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function toFloat($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            return (float) $value;
         }
 
         return null;

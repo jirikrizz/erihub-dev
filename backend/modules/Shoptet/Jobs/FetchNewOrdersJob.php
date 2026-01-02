@@ -22,6 +22,7 @@ use Modules\Shoptet\Services\SnapshotPipelineService;
 class FetchNewOrdersJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Modules\Core\Traits\WithJobLocking;
 
     public function __construct(private readonly string $scheduleId)
     {
@@ -33,113 +34,124 @@ class FetchNewOrdersJob implements ShouldQueue
         ShopSyncCursorService $cursors,
         SnapshotPipelineService $pipelines
     ): void {
-        /** @var JobSchedule|null $schedule */
-        $schedule = JobSchedule::query()->with('shop')->find($this->scheduleId);
-
-        if (! $schedule || ! $schedule->enabled) {
+        // Acquire job lock to prevent concurrent execution
+        if (!$this->acquireLock()) {
+            \Illuminate\Support\Facades\Log::info('FetchNewOrdersJob is already running, skipping');
             return;
         }
 
-        $schedule->forceFill([
-            'last_run_status' => 'running',
-            'last_run_message' => null,
-        ])->save();
-
-        $options = $schedule->options ?? [];
-        $fallbackHours = (int) Arr::get($options, 'fallback_lookback_hours', 24);
-        if ($fallbackHours < 1) {
-            $fallbackHours = 1;
-        }
-        $fullRescanHours = (int) Arr::get($options, 'full_rescan_hours', 0);
-        if ($fullRescanHours < 0) {
-            $fullRescanHours = 0;
-        }
-
         try {
-            $shops = $this->resolveShops($schedule);
-            $processedShops = 0;
+            /** @var JobSchedule|null $schedule */
+            $schedule = JobSchedule::query()->with('shop')->find($this->scheduleId);
 
-            foreach ($shops as $shop) {
-                $lock = $pipelines->acquireLock($shop, 'orders.incremental');
+            if (! $schedule || ! $schedule->enabled) {
+                return;
+            }
 
-                if (! $lock) {
-                    continue;
-                }
+            $schedule->forceFill([
+                'last_run_status' => 'running',
+                'last_run_message' => null,
+            ])->save();
 
-                $window = $this->buildWindow($shop, $cursors, $fallbackHours, $fullRescanHours);
+            $options = $schedule->options ?? [];
+            $fallbackHours = (int) Arr::get($options, 'fallback_lookback_hours', 24);
+            if ($fallbackHours < 1) {
+                $fallbackHours = 1;
+            }
+            $fullRescanHours = (int) Arr::get($options, 'full_rescan_hours', 0);
+            if ($fullRescanHours < 0) {
+                $fullRescanHours = 0;
+            }
 
-                if ($window === null) {
-                    $pipelines->releaseLock($lock);
-                    continue;
-                }
+            try {
+                $shops = $this->resolveShops($schedule);
+                $processedShops = 0;
 
-                [$from, $to] = $window;
+                foreach ($shops as $shop) {
+                    $lock = $pipelines->acquireLock($shop, 'orders.incremental');
 
-                $execution = $pipelines->start($shop, 'orders.incremental', [
-                    'schedule_id' => $this->scheduleId,
-                    'window' => [
-                        'from' => $from->toIso8601String(),
-                        'to' => $to->toIso8601String(),
-                    ],
-                ], now()->toIso8601String());
+                    if (! $lock) {
+                        continue;
+                    }
 
-                try {
-                    $result = $orders->sync($shop, $from, $to);
+                    $window = $this->buildWindow($shop, $cursors, $fallbackHours, $fullRescanHours);
 
-                    $lastChange = $result['last_change_time'] ?? $to->toIso8601String();
-                    $cursors->put($shop->id, 'orders.change_time', $lastChange, [
+                    if ($window === null) {
+                        $pipelines->releaseLock($lock);
+                        continue;
+                    }
+
+                    [$from, $to] = $window;
+
+                    $execution = $pipelines->start($shop, 'orders.incremental', [
+                        'schedule_id' => $this->scheduleId,
                         'window' => [
                             'from' => $from->toIso8601String(),
                             'to' => $to->toIso8601String(),
                         ],
-                        'updated_at' => now()->toIso8601String(),
-                    ]);
+                    ], now()->toIso8601String());
 
-                    $ordersProcessed = (int) ($result['orders_count'] ?? 0);
-                    $variantIds = $result['variant_ids'] ?? [];
+                    try {
+                        $result = $orders->sync($shop, $from, $to);
 
-                    $this->dispatchVariantUpdates($variantIds);
+                        $lastChange = $result['last_change_time'] ?? $to->toIso8601String();
+                        $cursors->put($shop->id, 'orders.change_time', $lastChange, [
+                            'window' => [
+                                'from' => $from->toIso8601String(),
+                                'to' => $to->toIso8601String(),
+                            ],
+                            'updated_at' => now()->toIso8601String(),
+                        ]);
 
-                    $pipelines->finish($execution, 'completed', [
-                        'processed_count' => $ordersProcessed,
-                        'orders_count' => $ordersProcessed,
-                        'variants_updated' => count($variantIds),
-                        'last_change_time' => $lastChange,
-                    ]);
-                    $processedShops++;
-                } catch (\Throwable $throwable) {
-                    $pipelines->finish($execution, 'error', [
-                        'message' => $throwable->getMessage(),
-                    ]);
+                        $ordersProcessed = (int) ($result['orders_count'] ?? 0);
+                        $variantIds = $result['variant_ids'] ?? [];
+
+                        $this->dispatchVariantUpdates($variantIds);
+
+                        $pipelines->finish($execution, 'completed', [
+                            'processed_count' => $ordersProcessed,
+                            'orders_count' => $ordersProcessed,
+                            'variants_updated' => count($variantIds),
+                            'last_change_time' => $lastChange,
+                        ]);
+                        $processedShops++;
+                    } catch (\Throwable $throwable) {
+                        $pipelines->finish($execution, 'error', [
+                            'message' => $throwable->getMessage(),
+                        ]);
+
+                        $pipelines->releaseLock($lock);
+
+                        throw $throwable;
+                    }
 
                     $pipelines->releaseLock($lock);
-
-                    throw $throwable;
                 }
 
-                $pipelines->releaseLock($lock);
+                $schedule->forceFill([
+                    'last_run_status' => 'completed',
+                    'last_run_ended_at' => now(),
+                    'last_run_message' => $processedShops
+                        ? sprintf('Objednávky synchronizovány pro %d shop(ů).', $processedShops)
+                        : 'Žádný shop nebyl synchronizován (lock aktivní nebo žádné změny).',
+                ])->save();
+            } catch (\Throwable $throwable) {
+                $schedule->forceFill([
+                    'last_run_status' => 'failed',
+                    'last_run_ended_at' => now(),
+                    'last_run_message' => $throwable->getMessage(),
+                ])->save();
+
+                Log::error('FetchNewOrdersJob failed', [
+                    'schedule_id' => $this->scheduleId,
+                    'exception' => $throwable,
+                ]);
+
+                throw $throwable;
             }
-
-            $schedule->forceFill([
-                'last_run_status' => 'completed',
-                'last_run_ended_at' => now(),
-                'last_run_message' => $processedShops
-                    ? sprintf('Objednávky synchronizovány pro %d shop(ů).', $processedShops)
-                    : 'Žádný shop nebyl synchronizován (lock aktivní nebo žádné změny).',
-            ])->save();
-        } catch (\Throwable $throwable) {
-            $schedule->forceFill([
-                'last_run_status' => 'failed',
-                'last_run_ended_at' => now(),
-                'last_run_message' => $throwable->getMessage(),
-            ])->save();
-
-            Log::error('FetchNewOrdersJob failed', [
-                'schedule_id' => $this->scheduleId,
-                'exception' => $throwable,
-            ]);
-
-            throw $throwable;
+        } finally {
+            // Always release the job lock
+            $this->releaseLock();
         }
     }
 

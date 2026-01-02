@@ -277,6 +277,8 @@ class CustomerController extends Controller
         $request->merge([
             'is_vip' => true,
             'include_filters' => true,
+            // do not include countries for VIP view (expensive DISTINCT over JSONB)
+            'include_countries' => false,
         ]);
 
         return $this->index($request);
@@ -410,6 +412,9 @@ class CustomerController extends Controller
                     foreach ($tagKeys as $tagKey) {
                         $builder->orWhere(function (Builder $inner) use ($tagKey) {
                             $this->applyTagFilter($inner, $tagKey);
+            if ($request->boolean('include_countries', true)) {
+                $filters['countries'] = $this->availableCountries($filtersBaseQuery);
+            }
                         });
                     }
                 });

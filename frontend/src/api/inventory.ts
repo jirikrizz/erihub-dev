@@ -26,6 +26,18 @@ export type InventoryProductFlag = {
   date_to: string | null;
 };
 
+export type InventoryVariantPricing = {
+  currency_code?: string | null;
+  base_price?: number | null;
+  action_price?: number | null;
+  action_price_from?: string | null;
+  action_price_to?: string | null;
+  is_action_price_active?: boolean;
+  effective_price?: number | null;
+  pricelist_id?: number | null;
+  source?: string | null;
+};
+
 export type InventoryVariant = {
   id: string;
   product_id: string;
@@ -98,6 +110,7 @@ export type InventoryVariant = {
   related_descriptors?: InventoryVariantRelatedDescriptors;
   related_products?: InventoryVariantRelatedProduct[];
   filter_parameters?: InventoryVariantFilterParameter[];
+  pricing?: InventoryVariantPricing;
   default_category_name?: string | null;
   seasonality_labels?: string[];
   ordered_quantity?: number | null;

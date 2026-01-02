@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Support\ReadOnlySanctumGuard;
+use Illuminate\Auth\RequestGuard;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -27,7 +30,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (env('APP_PREVIEW_READONLY', false)) {
+            // Override Sanctum guard to avoid DB writes (last_used_at updates) in read-only preview.
+            Auth::resolved(function ($auth) {
+                $auth->extend('sanctum', function ($app, $name, array $config) use ($auth) {
+                    return tap(
+                        new RequestGuard(
+                            new ReadOnlySanctumGuard($auth, config('sanctum.expiration'), $config['provider'] ?? null),
+                            $app['request'],
+                            $auth->createUserProvider($config['provider'] ?? null)
+                        ),
+                        function ($guard) use ($app) {
+                            $app->refresh('request', $guard, 'setRequest');
+                        }
+                    );
+                });
+            });
+        }
     }
 
     private function registerIfAvailable(string $provider): void

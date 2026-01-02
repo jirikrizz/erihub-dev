@@ -877,7 +877,7 @@ const buildWidgetSnippet = (widget: GeneratedWidget): WidgetSnippet => {
 
     const styleContent = `
 .dynamic-placeholder-block{display:block;border-radius:12px;}
-.category-countdown-banner{position:relative;overflow:hidden;border-radius:24px;padding:32px;text-align:center;min-height:var(--countdown-banner-min-height,300px);max-height:var(--countdown-banner-max-height,none);max-width:var(--countdown-banner-max-width,520px);width:100%;display:flex;align-items:center;justify-content:center;color:var(--countdown-banner-text,#ffffff);box-shadow:0 16px 40px rgba(0,0,0,0.12);height:auto;}
+.category-countdown-banner{position:relative;overflow:hidden;border-radius:24px;padding:32px;text-align:center;min-height:var(--countdown-banner-min-height,300px);max-height:var(--countdown-banner-max-height,none);max-width:var(--countdown-banner-max-width,520px);width:100%;display:flex;align-items:center;justify-content:center;color:var(--countdown-banner-text,#ffffff);box-shadow:none;height:auto;}
 .category-countdown-banner--height-auto{max-height:none;min-height:auto;height:auto;}
 .category-countdown-banner--rectangle{min-height:260px;}
 .category-countdown-banner--square{aspect-ratio:1/1;width:100%;}
@@ -1588,10 +1588,10 @@ div.category-countdown-banner__inner p.category-countdown-banner__description{ma
 .category-discount-tiles__banner-link{display:block;text-decoration:none;}
 .category-discount-tiles__banner-image{display:block;width:100%;border-radius:12px;min-height:160px;background-size:cover;background-position:center;background-repeat:no-repeat;}
 .category-discount-tiles__tiles{display:flex;flex-wrap:wrap;gap:10px;}
-.category-discount-tiles__tile{background:var(--discount-tiles-bg,#ff3f5f);color:var(--discount-tiles-text,#ffffff);border:none;border-radius:12px;cursor:pointer;width:80px;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:600;transition:transform .2s ease,background .2s ease,box-shadow .2s ease;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+.category-discount-tiles__tile{background:var(--discount-tiles-bg,#ff3f5f);color:var(--discount-tiles-text,#ffffff);border:none;border-radius:12px;cursor:pointer;width:80px;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:600;transition:transform .2s ease,background .2s ease;box-shadow:none;}
 .category-discount-tiles__tile:focus{outline:3px solid rgba(255,255,255,0.4);outline-offset:2px;}
 .category-discount-tiles__tile:hover{transform:scale(1.05);}
-.category-discount-tiles__tile--active{background:var(--discount-tiles-active-bg,#ea1539);box-shadow:0 0 0 3px rgba(255,255,255,0.35);}
+.category-discount-tiles__tile--active{background:var(--discount-tiles-active-bg,#ea1539);box-shadow:none;}
 .category-discount-tiles__value{font-size:24px;line-height:1;}
 .category-discount-tiles__text{font-size:14px;text-transform:uppercase;letter-spacing:0.04em;}
 .category-discount-tiles__placeholder{display:flex;align-items:center;justify-content:center;min-height:120px;border:1px dashed rgba(255,255,255,0.4);border-radius:12px;padding:32px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--discount-tiles-text,#ffffff);background:rgba(255,255,255,0.04);text-align:center;}

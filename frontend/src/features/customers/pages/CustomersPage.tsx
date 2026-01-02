@@ -8,13 +8,10 @@ import {
   MultiSelect,
   NumberInput,
   Pagination,
-  Popover,
-  ScrollArea,
   SegmentedControl,
   Select,
   Stack,
   Table,
-  TagsInput,
   Text,
   TextInput,
   Tooltip,
@@ -22,8 +19,17 @@ import {
 import { useDebouncedValue } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconEye, IconFilter, IconPlus, IconSettings, IconStarFilled, IconTag, IconX } from '@tabler/icons-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+  type CSSProperties,
+} from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useCustomers } from '../hooks/useCustomers';
 import { useShops } from '../../shoptet/hooks/useShops';
@@ -46,7 +52,6 @@ import { SectionCard } from '../../../components/ui/SectionCard';
 import tableClasses from '../../../components/table/DataTable.module.css';
 import { DataTableHeaderCell, type HeaderColumn } from '../../../components/table/DataTableHeaderCell';
 import { sortByDescriptors, updateSortDescriptors, type SortDescriptor } from '../../../components/table/sorting';
-import { useColumnResizing } from '../../../components/table/useColumnResizing';
 import { TableToolbar } from '../../../components/table/TableToolbar';
 import { ColumnSummaryPopover } from '../../../components/table/ColumnSummaryPopover';
 import { TableExportAction } from '../../../components/table/TableExportAction';
@@ -212,12 +217,14 @@ const CUSTOMER_COLUMN_SIZE_CONFIG: Array<{ key: CustomersColumn; minWidth: numbe
   { key: 'customer_group', minWidth: 160, defaultWidth: 180 },
   { key: 'price_list', minWidth: 140, defaultWidth: 160 },
   { key: 'shop', minWidth: 220, defaultWidth: 260 },
-  { key: 'orders', minWidth: 140, defaultWidth: 160 },
-  { key: 'total_spent', minWidth: 160, defaultWidth: 180 },
-  { key: 'average_order_value', minWidth: 160, defaultWidth: 180 },
+  { key: 'orders', minWidth: 170, defaultWidth: 200 },
+  { key: 'total_spent', minWidth: 180, defaultWidth: 210 },
+  { key: 'average_order_value', minWidth: 180, defaultWidth: 210 },
   { key: 'registered_at', minWidth: 180, defaultWidth: 200 },
   { key: 'last_order_at', minWidth: 180, defaultWidth: 200 },
 ];
+
+const VIRTUAL_ROW_HEIGHT = 72;
 
 const sanitizeSortDescriptors = (
   value: unknown,
@@ -346,8 +353,6 @@ export const CustomersPage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedCustomersMap, setSelectedCustomersMap] = useState<Record<string, Customer>>({});
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-  const [draftTags, setDraftTags] = useState<Record<string, string[]>>({});
-  const [savingTagsFor, setSavingTagsFor] = useState<string | null>(null);
   const [bulkTagsOpened, setBulkTagsOpened] = useState(false);
   const [bulkTagsLoading, setBulkTagsLoading] = useState(false);
   const [bulkSelectedTags, setBulkSelectedTags] = useState<string[]>([]);
@@ -377,37 +382,53 @@ export const CustomersPage = () => {
     queryKey: ['customers', 'manual-tags'],
     queryFn: fetchCustomerTags,
   });
+  const uniqueManualTags = useMemo(() => {
+    const seen = new Set<string>();
+    const result: CustomerTag[] = [];
+
+    (manualTagsQuery.data ?? []).forEach((tag) => {
+      const key = tag.value.trim().toLowerCase();
+      if (key === '' || seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      result.push(tag);
+    });
+
+    return result;
+  }, [manualTagsQuery.data]);
   const tagDefinitions: TagDefinition[] = useMemo(
     () =>
-      (manualTagsQuery.data ?? []).map((tag) => ({
+      uniqueManualTags.map((tag) => ({
         id: tag.id,
         name: tag.name,
         color: tag.color,
         is_hidden: tag.is_hidden,
       })),
-    [manualTagsQuery.data]
+    [uniqueManualTags]
   );
   const tagColorMap = useMemo(() => {
     const map = new Map<string, string | null>();
-    (manualTagsQuery.data ?? []).forEach((tag) => {
+    uniqueManualTags.forEach((tag) => {
       map.set(tag.label.toLowerCase(), tag.color);
     });
     return map;
-  }, [manualTagsQuery.data]);
+  }, [uniqueManualTags]);
   const tagHiddenMap = useMemo(() => {
     const map = new Map<string, boolean>();
-    (manualTagsQuery.data ?? []).forEach((tag) => {
+    uniqueManualTags.forEach((tag) => {
       map.set(tag.label.toLowerCase(), tag.is_hidden);
     });
     return map;
-  }, [manualTagsQuery.data]);
+  }, [uniqueManualTags]);
   const manualTagOptions = useMemo(
     () =>
-      (manualTagsQuery.data ?? []).map((tag) => ({
+      uniqueManualTags.map((tag) => ({
         value: tag.value,
         label: tag.label,
       })),
-    [manualTagsQuery.data]
+    [uniqueManualTags]
   );
   const manualTagsInDataQuery = useQuery<CustomerManualTagOption[]>({
     queryKey: ['customers', 'manual-tags-in-data'],
@@ -527,14 +548,25 @@ export const CustomersPage = () => {
 
     return shopProviderOptions([...shopProviders, ...customerProviders]);
   }, [data?.data, shopsQuery.data]);
-  const tagOptions = useMemo(
-    () =>
-      (data?.filters?.tags ?? []).map((tag) => ({
-        value: tag.value,
-        label: tag.label,
-      })),
-    [data?.filters?.tags]
-  );
+  const tagOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const result: Array<{ value: string; label: string }> = [];
+
+    (data?.filters?.tags ?? []).forEach((tag) => {
+      const rawValue = tag.value?.trim();
+      if (!rawValue) {
+        return;
+      }
+      const key = rawValue.toLowerCase();
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      result.push({ value: rawValue, label: tag.label });
+    });
+
+    return result;
+  }, [data?.filters?.tags]);
 
   const buildPreferencePayload = useCallback((): CustomersListPreference => {
     return {
@@ -751,8 +783,16 @@ export const CustomersPage = () => {
     []
   );
 
-  const { sizes: columnSizes, startResizing, resetWidth, activeKey: resizingColumn } = useColumnResizing<CustomersColumn>(
-    CUSTOMER_COLUMN_SIZE_CONFIG
+  const columnSizes = useMemo<Record<CustomersColumn, number>>(
+    () =>
+      CUSTOMER_COLUMN_SIZE_CONFIG.reduce(
+        (acc, config) => ({
+          ...acc,
+          [config.key]: config.defaultWidth ?? config.minWidth ?? 160,
+        }),
+        {} as Record<CustomersColumn, number>
+      ),
+    []
   );
 
   const headerColumns = useMemo<HeaderColumn<CustomersColumn, SortColumn>[]>(
@@ -1286,6 +1326,20 @@ export const CustomersPage = () => {
   }, [customerMatchesColumnFilters, selectedCustomersMap, selectedIds, sortState]);
 
   const tableRows = showSelectedOnly ? selectedCustomersSorted : filteredCustomers;
+  const tableViewportRef = useRef<HTMLDivElement | null>(null);
+  const tableViewportHeight = useMemo(() => {
+    const target = tableRows.length * VIRTUAL_ROW_HEIGHT;
+    return Math.min(720, Math.max(360, target || 360));
+  }, [tableRows.length]);
+  const rowVirtualizer = useVirtualizer({
+    count: tableRows.length,
+    getScrollElement: () => tableViewportRef.current,
+    estimateSize: () => VIRTUAL_ROW_HEIGHT,
+    overscan: 8,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? VIRTUAL_ROW_HEIGHT,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalVirtualHeight = rowVirtualizer.getTotalSize();
 
   const setPrimarySortColumn = useCallback((column: SortColumn) => {
     setSortState((current) => {
@@ -1365,48 +1419,291 @@ export const CustomersPage = () => {
     setShowSelectedOnly(false);
   }, []);
 
-  const updateTagsMutation = useMutation({
-    mutationFn: ({ id, tags }: { id: string; tags: string[] }) => updateCustomer(id, { tags }),
-    onSuccess: (updatedCustomer) => {
-      setSavingTagsFor(null);
-      setDraftTags((current) => ({
-        ...current,
-        [updatedCustomer.id]: updatedCustomer.tags ?? [],
-      }));
-
-      queryClient.setQueriesData({ queryKey: ['customers'] }, (current: unknown) => {
-        if (!current || typeof current !== 'object') {
-          return current;
-        }
-        const snapshot = current as { data?: Customer[] };
-        if (!Array.isArray(snapshot.data)) {
-          return current;
-        }
-
-        return {
-          ...(snapshot as Record<string, unknown>),
-          data: snapshot.data.map((customer) =>
-            customer.id === updatedCustomer.id ? updatedCustomer : customer
-          ),
-        };
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['customers', 'detail', updatedCustomer.id] });
-      notifications.show({ message: 'Štítky uloženy.', color: 'green' });
+  const navigateToCustomer = useCallback(
+    (id: string) => {
+      navigate(`/customers/${id}`);
     },
-    onError: () => {
-      setSavingTagsFor(null);
-      notifications.show({ message: 'Uložení štítků selhalo.', color: 'red' });
-    },
+    [navigate]
+  );
+
+  type CustomerRowProps = {
+    customer: Customer;
+    columnVisibility: Record<ColumnKey, boolean>;
+    showTagBadges: boolean;
+    tagColorMap: Map<string, string | null>;
+    tagHiddenMap: Map<string, boolean>;
+    selectedIds: Set<string>;
+    toggleRowSelection: (customer: Customer, checked: boolean) => void;
+    formatNumber: (value: number | null | undefined, digits?: number) => string;
+    formatCurrency: (value: number | null | undefined) => string;
+    formatDate: (value: string | null | undefined) => string;
+    navigateToCustomer: (id: string) => void;
+    rowStyle?: CSSProperties;
+    columnSizes: Record<CustomersColumn, number>;
+    measureElement?: (element: HTMLElement | null) => void;
+    rowIndex?: number;
+  };
+
+  const CustomerRow = memo(function CustomerRow({
+    customer,
+    columnVisibility,
+    showTagBadges,
+    tagColorMap,
+    tagHiddenMap,
+    selectedIds,
+    toggleRowSelection,
+    formatNumber,
+    formatCurrency,
+    formatDate,
+    navigateToCustomer,
+    rowStyle,
+    columnSizes,
+    measureElement,
+    rowIndex,
+  }: CustomerRowProps) {
+    const providersToDisplay = useMemo(() => {
+      const shop = customer.shop;
+      return Array.from(
+        new Set(
+          [
+            customer.shop_provider,
+            ...(customer.order_providers ?? []),
+            shop?.provider ?? null,
+          ]
+            .filter((value): value is string => typeof value === 'string' && value !== '')
+            .map((value) => value.toLowerCase())
+        )
+      );
+    }, [customer]);
+
+    const shop = customer.shop;
+    const localeLabel = shop?.locale ? shop.locale.toUpperCase() : null;
+
+    return (
+      <Table.Tr
+        key={customer.id}
+        onClick={() => navigateToCustomer(customer.id)}
+        className={`${tableClasses.virtualRow} ${tableClasses.row}`}
+        style={{ cursor: 'pointer', ...rowStyle }}
+        data-row-id={customer.id}
+        data-index={rowIndex}
+        ref={measureElement}
+      >
+        <Table.Td
+          onClick={(event) => event.stopPropagation()}
+          className={`${tableClasses.selectionCell} ${tableClasses.cell}`}
+        >
+          <Checkbox
+            size="sm"
+            radius="sm"
+            aria-label="Vybrat zákazníka"
+            checked={selectedIds.has(customer.id)}
+            onChange={(event) => {
+              event.stopPropagation();
+              toggleRowSelection(customer, event.currentTarget.checked);
+            }}
+          />
+        </Table.Td>
+        <Table.Td className={tableClasses.cell} style={{ width: columnSizes.name, minWidth: columnSizes.name }}>
+          <Stack gap={2} align="flex-start">
+            <Group gap={6}>
+              <Text fw={600}>{customer.full_name ?? '—'}</Text>
+              {customer.is_vip && (
+                <Badge color="yellow" variant="filled" leftSection={<IconStarFilled size={12} />}>
+                  VIP
+                </Badge>
+              )}
+            </Group>
+          </Stack>
+        </Table.Td>
+        {columnVisibility.email && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ width: columnSizes.email, minWidth: columnSizes.email }}
+          >
+            {customer.email ?? '—'}
+          </Table.Td>
+        )}
+        {columnVisibility.phone && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ width: columnSizes.phone, minWidth: columnSizes.phone }}
+          >
+            {customer.phone ?? '—'}
+          </Table.Td>
+        )}
+        {columnVisibility.customer_group && (
+          <Table.Td
+            onClick={(event) => event.stopPropagation()}
+            className={tableClasses.cell}
+            style={{ width: columnSizes.customer_group, minWidth: columnSizes.customer_group }}
+          >
+            <Stack gap={6}>
+              {showTagBadges ? (
+                customer.tag_badges && customer.tag_badges.length > 0 ? (
+                  <Group gap={4} wrap="wrap">
+                    {customer.tag_badges.map((badge) => {
+                      const derivedColor =
+                        badge.color ?? tagColorMap.get(badge.label.toLowerCase()) ?? null;
+                      const colorValue = typeof derivedColor === 'string' ? derivedColor.trim() : '';
+                      const hasCustomColor = colorValue.startsWith('#');
+                      const isHidden = tagHiddenMap.get(badge.label.toLowerCase()) ?? false;
+
+                      const badgeColor = hasCustomColor
+                        ? 'gray'
+                        : colorValue !== ''
+                          ? colorValue
+                          : badge.type === 'automatic'
+                            ? 'blue'
+                            : 'gray';
+
+                      const leftSection = hasCustomColor ? (
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: 10,
+                            height: 10,
+                            borderRadius: 9999,
+                            backgroundColor: colorValue,
+                          }}
+                        />
+                      ) : null;
+                      return (
+                        <Badge
+                          key={`${customer.id}-${badge.key}`}
+                          color={badgeColor}
+                          leftSection={leftSection}
+                          variant={
+                            badge.type === 'automatic'
+                              ? 'light'
+                              : badge.type === 'standard'
+                                ? 'filled'
+                                : 'outline'
+                          }
+                          size="xs"
+                          title={isHidden ? 'Schované položky' : undefined}
+                          style={isHidden ? { opacity: 0.6 } : undefined}
+                        >
+                          {badge.label}
+                        </Badge>
+                      );
+                    })}
+                  </Group>
+                ) : (
+                  <Text size="sm" c="dimmed">
+                    —
+                  </Text>
+                )
+              ) : (
+                <Text size="sm" c="dimmed">
+                  Štítky skryté
+                </Text>
+              )}
+            </Stack>
+          </Table.Td>
+        )}
+        {columnVisibility.price_list && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ width: columnSizes.price_list, minWidth: columnSizes.price_list }}
+          >
+            {customer.price_list ? <Badge color="violet">{customer.price_list}</Badge> : '—'}
+          </Table.Td>
+        )}
+        {columnVisibility.shop && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ width: columnSizes.shop, minWidth: columnSizes.shop }}
+          >
+            {shop ? (
+              <Stack gap={2}>
+                <Group gap={6} wrap="wrap">
+                  <Text size="sm" fw={500} component="span">
+                    {shop.name}
+                  </Text>
+                  <Group gap={4} wrap="wrap">
+                    {providersToDisplay.map((provider) => (
+                      <ShopProviderBadge key={provider} provider={provider} />
+                    ))}
+                  </Group>
+                  {shop.is_master && (
+                    <Badge size="xs" color="teal">
+                      Master
+                    </Badge>
+                  )}
+                </Group>
+                <Text size="xs" c="dimmed" component="span">
+                  {shop.domain}
+                  {localeLabel ? ` · ${localeLabel}` : ''}
+                </Text>
+              </Stack>
+            ) : providersToDisplay.length ? (
+              <Group gap={4} wrap="wrap">
+                {providersToDisplay.map((provider) => (
+                  <ShopProviderBadge key={provider} provider={provider} />
+                ))}
+              </Group>
+            ) : (
+              '—'
+            )}
+          </Table.Td>
+        )}
+        {columnVisibility.orders_count && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ textAlign: 'right', width: columnSizes.orders, minWidth: columnSizes.orders }}
+          >
+            {(() => {
+              const completed = customer.completed_orders ?? customer.orders_count ?? 0;
+              const problem = customer.problem_orders ?? 0;
+
+              return `${formatNumber(completed)} / ${formatNumber(problem)}`;
+            })()}
+          </Table.Td>
+        )}
+        {columnVisibility.total_spent && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ textAlign: 'right', width: columnSizes.total_spent, minWidth: columnSizes.total_spent }}
+          >
+            {formatCurrency(customer.total_spent_base ?? customer.total_spent ?? 0)}
+          </Table.Td>
+        )}
+        {columnVisibility.average_order_value && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{
+              textAlign: 'right',
+              width: columnSizes.average_order_value,
+              minWidth: columnSizes.average_order_value,
+            }}
+          >
+            {formatCurrency(
+              customer.average_order_value_base ?? customer.average_order_value ?? 0
+            )}
+          </Table.Td>
+        )}
+        {columnVisibility.registered_at && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ width: columnSizes.registered_at, minWidth: columnSizes.registered_at }}
+          >
+            {formatDate(customer.created_at_remote ?? null)}
+          </Table.Td>
+        )}
+        {columnVisibility.last_order_at && (
+          <Table.Td
+            className={tableClasses.cell}
+            style={{ width: columnSizes.last_order_at, minWidth: columnSizes.last_order_at }}
+          >
+            {formatDate(customer.last_order_at ?? null)}
+          </Table.Td>
+        )}
+      </Table.Tr>
+    );
   });
 
-  const handleSaveTags = useCallback(
-    (customer: Customer, tags: string[]) => {
-      setSavingTagsFor(customer.id);
-      updateTagsMutation.mutate({ id: customer.id, tags });
-    },
-    [updateTagsMutation]
-  );
+  CustomerRow.displayName = 'CustomerRow';
 
   const handleBulkTagsConfirm = useCallback(async () => {
     if (selectedIds.size === 0) {
@@ -1547,25 +1844,46 @@ export const CustomersPage = () => {
     [manualTagsInDataQuery, manualTagsQuery]
   );
 
-  const formatNumber = (value: number | null | undefined, digits = 0) => {
-    if (value === null || value === undefined) {
-      return '—';
+  const numberFormattersRef = useRef<Record<number, Intl.NumberFormat>>({});
+
+  const getNumberFormatter = useCallback((digits = 0) => {
+    if (!numberFormattersRef.current[digits]) {
+      numberFormattersRef.current[digits] = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: digits });
     }
+    return numberFormattersRef.current[digits];
+  }, []);
 
-    return value.toLocaleString('cs-CZ', { maximumFractionDigits: digits });
-  };
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('cs-CZ', {
+        style: 'currency',
+        currency: baseCurrency,
+        maximumFractionDigits: 2,
+      }),
+    [baseCurrency]
+  );
 
-  const formatCurrency = (value: number | null | undefined) => {
-    if (value === null || value === undefined) {
-      return '—';
-    }
+  const formatNumber = useCallback(
+    (value: number | null | undefined, digits = 0) => {
+      if (value === null || value === undefined) {
+        return '—';
+      }
 
-    return new Intl.NumberFormat('cs-CZ', {
-      style: 'currency',
-      currency: baseCurrency,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
+      return getNumberFormatter(digits).format(value);
+    },
+    [getNumberFormatter]
+  );
+
+  const formatCurrency = useCallback(
+    (value: number | null | undefined) => {
+      if (value === null || value === undefined) {
+        return '—';
+      }
+
+      return currencyFormatter.format(value);
+    },
+    [currencyFormatter]
+  );
 
   const columnSums = useMemo(() => {
     const getOrders = (customer: Customer) => customer.completed_orders ?? customer.orders_count ?? 0;
@@ -1736,7 +2054,7 @@ export const CustomersPage = () => {
   const totalFiltered = typeof data?.total === 'number' ? data.total : filteredCustomers.length;
   const totalRecords = typeof data?.total === 'number' ? data.total : totalFiltered;
 
-  const formatDate = (value: string | null | undefined) => {
+  const formatDate = useCallback((value: string | null | undefined) => {
     if (!value) {
       return '—';
     }
@@ -1747,7 +2065,7 @@ export const CustomersPage = () => {
     }
 
     return date.toLocaleString('cs-CZ');
-  };
+  }, []);
   const resolveColumnValue = (key: CustomersColumn, customer: Customer) => {
     switch (key) {
       case 'name':
@@ -2333,7 +2651,16 @@ export const CustomersPage = () => {
               </Group>
             )}
 
-          <ScrollArea type="auto" offsetScrollbars>
+          <div
+            ref={tableViewportRef}
+            style={{
+              height: tableViewportHeight,
+              maxHeight: '72vh',
+              minHeight: 320,
+              overflowY: 'auto',
+              overflowX: 'auto',
+            }}
+          >
             <div style={{ minWidth: 1100 }}>
               <Table highlightOnHover verticalSpacing="sm" className={tableClasses.table}>
                 <Table.Thead>
@@ -2355,11 +2682,6 @@ export const CustomersPage = () => {
                       sortState={sortState}
                       onToggleSort={column.sortable ? handleHeaderSort : undefined}
                       width={columnSizes[column.key]}
-                      resizeHandlers={{
-                        onMouseDown: (event) => startResizing(column.key, event),
-                        onDoubleClick: () => resetWidth(column.key),
-                        active: resizingColumn === column.key,
-                      }}
                     />
                   ))}
                 </Table.Tr>
@@ -2601,246 +2923,15 @@ export const CustomersPage = () => {
               </Table.Tr>
             )}
               </Table.Thead>
-              <Table.Tbody>
-                {isLoading && (
+              {isLoading && (
+                <Table.Tbody>
                   <Table.Tr>
                     <Table.Td colSpan={columnCount}>Načítám...</Table.Td>
                   </Table.Tr>
-                )}
-                {tableRows.map((customer) => {
-                  const shop = customer.shop;
-                  const localeLabel = shop?.locale ? shop.locale.toUpperCase() : null;
-                  const providersToDisplay = Array.from(
-                    new Set(
-                      [
-                        customer.shop_provider,
-                        ...(customer.order_providers ?? []),
-                        shop?.provider ?? null,
-                      ]
-                        .filter((value): value is string => typeof value === 'string' && value !== '')
-                        .map((value) => value.toLowerCase())
-                    )
-                  );
-
-                  return (
-                  <Table.Tr
-                    key={customer.id}
-                    onClick={() => navigate(`/customers/${customer.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Table.Td onClick={(event) => event.stopPropagation()} className={tableClasses.selectionCell}>
-                      <Checkbox
-                        size="sm"
-                        radius="sm"
-                        aria-label="Vybrat zákazníka"
-                        checked={selectedIds.has(customer.id)}
-                        onChange={(event) => {
-                          event.stopPropagation();
-                          toggleRowSelection(customer, event.currentTarget.checked);
-                        }}
-                      />
-                    </Table.Td>
-                    <Table.Td>
-                      <Stack gap={2} align="flex-start">
-                        <Group gap={6}>
-                          <Text fw={600}>{customer.full_name ?? '—'}</Text>
-                          {customer.is_vip && (
-                            <Badge color="yellow" variant="filled" leftSection={<IconStarFilled size={12} />}>
-                              VIP
-                            </Badge>
-                          )}
-                        </Group>
-                      </Stack>
-                    </Table.Td>
-                    {columnVisibility.email && <Table.Td>{customer.email ?? '—'}</Table.Td>}
-                    {columnVisibility.phone && <Table.Td>{customer.phone ?? '—'}</Table.Td>}
-                    {columnVisibility.customer_group && (
-                      <Table.Td onClick={(event) => event.stopPropagation()}>
-                        <Stack gap={6}>
-                      {showTagBadges ? (
-                        customer.tag_badges && customer.tag_badges.length > 0 ? (
-                          <Group gap={4} wrap="wrap">
-                            {customer.tag_badges.map((badge) => {
-                              const derivedColor =
-                                badge.color ?? tagColorMap.get(badge.label.toLowerCase()) ?? null;
-                              const colorValue = typeof derivedColor === 'string' ? derivedColor.trim() : '';
-                              const hasCustomColor = colorValue.startsWith('#');
-                              const isHidden = tagHiddenMap.get(badge.label.toLowerCase()) ?? false;
-
-                              const badgeColor = hasCustomColor
-                                ? 'gray'
-                                : colorValue !== ''
-                                  ? colorValue
-                                  : badge.type === 'automatic'
-                                    ? 'blue'
-                                    : 'gray';
-
-                              const leftSection = hasCustomColor ? (
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: 9999,
-                                    backgroundColor: colorValue,
-                                  }}
-                                />
-                              ) : null;
-                              return (
-                                <Badge
-                                  key={`${customer.id}-${badge.key}`}
-                                  color={badgeColor}
-                                  leftSection={leftSection}
-                                  variant={
-                                    badge.type === 'automatic'
-                                      ? 'light'
-                                      : badge.type === 'standard'
-                                        ? 'filled'
-                                        : 'outline'
-                                  }
-                                  size="xs"
-                                  title={isHidden ? 'Schované položky' : undefined}
-                                  style={isHidden ? { opacity: 0.6 } : undefined}
-                                >
-                                  {badge.label}
-                                </Badge>
-                              );
-                            })}
-                          </Group>
-                        ) : (
-                          <Text size="sm" c="dimmed">—</Text>
-                        )
-                      ) : (
-                        <Text size="sm" c="dimmed">Štítky skryté</Text>
-                      )}
-                          <Popover width={320} withArrow shadow="md" position="bottom-start">
-                            <Popover.Target>
-                              <Button
-                                size="xs"
-                                variant="light"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                Upravit štítky
-                              </Button>
-                            </Popover.Target>
-                            <Popover.Dropdown onClick={(event) => event.stopPropagation()}>
-                              <Stack gap="sm">
-                                <TagsInput
-                                  label="Štítky zákazníka"
-                                  value={draftTags[customer.id] ?? customer.tags ?? []}
-                                  onChange={(value) =>
-                                    setDraftTags((current) => ({
-                                      ...current,
-                                      [customer.id]: value,
-                                    }))
-                                  }
-                                  data={manualTagOptions}
-                                  clearable
-                                  placeholder="Přidej štítek a potvrď Enterem"
-                                />
-                                <Group justify="space-between">
-                                  <Button
-                                    size="xs"
-                                    variant="subtle"
-                                    onClick={() =>
-                                      setDraftTags((current) => ({
-                                        ...current,
-                                        [customer.id]: customer.tags ?? [],
-                                      }))
-                                    }
-                                  >
-                                    Obnovit
-                                  </Button>
-                                  <Button
-                                    size="xs"
-                                    onClick={() =>
-                                      handleSaveTags(customer, draftTags[customer.id] ?? customer.tags ?? [])
-                                    }
-                                    loading={savingTagsFor === customer.id && updateTagsMutation.isPending}
-                                  >
-                                    Uložit
-                                  </Button>
-                                </Group>
-                              </Stack>
-                            </Popover.Dropdown>
-                          </Popover>
-                        </Stack>
-                      </Table.Td>
-                    )}
-                    {columnVisibility.price_list && (
-                      <Table.Td>
-                        {customer.price_list ? <Badge color="violet">{customer.price_list}</Badge> : '—'}
-                      </Table.Td>
-                    )}
-                    {columnVisibility.shop && (
-                      <Table.Td>
-                        {shop ? (
-                          <Stack gap={2}>
-                            <Group gap={6} wrap="wrap">
-                              <Text size="sm" fw={500} component="span">
-                                {shop.name}
-                              </Text>
-                              <Group gap={4} wrap="wrap">
-                                {providersToDisplay.map((provider) => (
-                                  <ShopProviderBadge key={provider} provider={provider} />
-                                ))}
-                              </Group>
-                              {shop.is_master && (
-                                <Badge size="xs" color="teal">
-                                  Master
-                                </Badge>
-                              )}
-                            </Group>
-                            <Text size="xs" c="dimmed" component="span">
-                              {shop.domain}
-                              {localeLabel ? ` · ${localeLabel}` : ''}
-                            </Text>
-                          </Stack>
-                        ) : providersToDisplay.length ? (
-                          <Group gap={4} wrap="wrap">
-                            {providersToDisplay.map((provider) => (
-                              <ShopProviderBadge key={provider} provider={provider} />
-                            ))}
-                          </Group>
-                        ) : (
-                          '—'
-                        )}
-                      </Table.Td>
-                    )}
-                    {columnVisibility.orders_count && (
-                      <Table.Td style={{ textAlign: 'right' }}>
-                        {(() => {
-                          const completed = customer.completed_orders ?? customer.orders_count ?? 0;
-                          const problem = customer.problem_orders ?? 0;
-
-                          return `${formatNumber(completed)} / ${formatNumber(problem)}`;
-                        })()}
-                      </Table.Td>
-                    )}
-                    {columnVisibility.total_spent && (
-                      <Table.Td style={{ textAlign: 'right' }}>
-                        {formatCurrency(
-                          customer.total_spent_base ?? customer.total_spent ?? 0
-                        )}
-                      </Table.Td>
-                    )}
-                    {columnVisibility.average_order_value && (
-                      <Table.Td style={{ textAlign: 'right' }}>
-                        {formatCurrency(
-                          customer.average_order_value_base ?? customer.average_order_value ?? 0
-                        )}
-                      </Table.Td>
-                    )}
-                    {columnVisibility.registered_at && (
-                      <Table.Td>{formatDate(customer.created_at_remote ?? null)}</Table.Td>
-                    )}
-                    {columnVisibility.last_order_at && (
-                      <Table.Td>{formatDate(customer.last_order_at ?? null)}</Table.Td>
-                    )}
-                  </Table.Tr>
-                  );
-                })}
-                {!isLoading && tableRows.length === 0 && (
+                </Table.Tbody>
+              )}
+              {!isLoading && tableRows.length === 0 && (
+                <Table.Tbody>
                   <Table.Tr>
                     <Table.Td colSpan={columnCount}>
                       <Text size="sm" c="dimmed">
@@ -2848,11 +2939,49 @@ export const CustomersPage = () => {
                       </Text>
                     </Table.Td>
                   </Table.Tr>
-                )}
-              </Table.Tbody>
+                </Table.Tbody>
+              )}
+              {!isLoading && tableRows.length > 0 && (
+                <Table.Tbody
+                  className={tableClasses.body}
+                  style={{
+                    height: totalVirtualHeight,
+                  }}
+                >
+                  {virtualRows.map((virtualRow) => {
+                    const customer = tableRows[virtualRow.index];
+                    return (
+                      <CustomerRow
+                        key={customer.id}
+                        customer={customer}
+                        columnVisibility={columnVisibility}
+                        showTagBadges={showTagBadges}
+                        tagColorMap={tagColorMap}
+                        tagHiddenMap={tagHiddenMap}
+                        selectedIds={selectedIds}
+                        toggleRowSelection={toggleRowSelection}
+                        formatNumber={formatNumber}
+                        formatCurrency={formatCurrency}
+                        formatDate={formatDate}
+                        navigateToCustomer={navigateToCustomer}
+                        columnSizes={columnSizes}
+                        measureElement={rowVirtualizer.measureElement}
+                        rowIndex={virtualRow.index}
+                        rowStyle={{
+                          position: 'absolute',
+                          top: virtualRow.start,
+                          width: '100%',
+                          left: 0,
+                          right: 0,
+                        }}
+                      />
+                    );
+                  })}
+                </Table.Tbody>
+              )}
             </Table>
             </div>
-          </ScrollArea>
+          </div>
 
             {!showSelectedOnly && (
               <Group justify="flex-end">

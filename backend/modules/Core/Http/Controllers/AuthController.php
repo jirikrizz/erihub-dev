@@ -3,6 +3,7 @@
 namespace Modules\Core\Http\Controllers;
 
 use App\Models\User;
+use App\Support\PreviewTokenService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
@@ -12,8 +13,10 @@ use Modules\Core\Support\NotificationPreferenceNormalizer;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly UserPreferenceService $preferences)
-    {
+    public function __construct(
+        private readonly UserPreferenceService $preferences,
+        private readonly PreviewTokenService $previewTokens
+    ) {
     }
 
     public function login(Request $request)
@@ -33,7 +36,11 @@ class AuthController extends Controller
 
         $user->load(['roles', 'permissions']);
 
-        $token = $user->createToken($credentials['device_name'] ?? 'frontend')->plainTextToken;
+        if (env('APP_PREVIEW_READONLY', false)) {
+            $token = $this->previewTokens->createPreviewToken($user);
+        } else {
+            $token = $user->createToken($credentials['device_name'] ?? 'frontend')->plainTextToken;
+        }
 
         $notificationPreferences = $this->preferences->get($user, 'notifications.events');
         $normalizedPreferences = NotificationPreferenceNormalizer::normalize(

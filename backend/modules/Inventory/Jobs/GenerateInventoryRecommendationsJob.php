@@ -16,16 +16,28 @@ use Modules\Inventory\Models\InventoryVariantRecommendation;
 use Modules\Inventory\Services\InventoryProductRecommendationService;
 use Modules\Inventory\Services\InventoryRecommendationService;
 use Modules\Pim\Models\ProductVariant;
+use Modules\Core\Traits\WithJobLocking;
 
 class GenerateInventoryRecommendationsJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, WithJobLocking;
+
+    /**
+     * Allow more time; previous runs were killed around 1h.
+     */
+    public int $timeout = 7200;
+
+    /**
+     * Job lock timeout (slightly less than overall timeout)
+     */
+    protected int $jobLockTimeout = 7100;
 
     private array $excludeKeywords;
 
     public function __construct(private readonly string $scheduleId)
     {
-        $this->queue = 'default';
+        // Run heavy recommendation rebuilds on a dedicated queue so they don't block default workers.
+        $this->queue = 'inventory_recommendations';
         $this->excludeKeywords = [];
     }
 
@@ -34,6 +46,12 @@ class GenerateInventoryRecommendationsJob implements ShouldQueue
         InventoryProductRecommendationService $productRecommendationService
     ): void
     {
+        if (!$this->acquireLock()) {
+            Log::info('GenerateInventoryRecommendationsJob already running, skipping');
+            return;
+        }
+
+        try {
         /** @var JobSchedule|null $schedule */
         $schedule = JobSchedule::query()->find($this->scheduleId);
 
@@ -48,7 +66,8 @@ class GenerateInventoryRecommendationsJob implements ShouldQueue
 
         try {
             $options = $schedule->options ?? [];
-            $chunk = max(10, (int) Arr::get($options, 'chunk', 50));
+            // Keep chunks small to reduce memory footprint and execution time per loop.
+            $chunk = max(10, (int) Arr::get($options, 'chunk', 20));
             $limit = max(1, (int) Arr::get($options, 'limit', 6));
             $productLimit = max(1, (int) Arr::get($options, 'product_limit', 10));
             $skipVariants = (bool) Arr::get($options, 'skip_variants', false);
@@ -78,6 +97,9 @@ class GenerateInventoryRecommendationsJob implements ShouldQueue
                             $processedVariants++;
                             $this->rebuildForVariant($variant, $recommendationService, $limit);
                         }
+
+                        // Explicitly free cyclic references after each chunk.
+                        gc_collect_cycles();
                     });
             }
 
@@ -118,12 +140,17 @@ class GenerateInventoryRecommendationsJob implements ShouldQueue
             return;
         }
 
+        if ($variant->product && in_array($variant->product->status, ['hidden', 'blocked', 'archived', 'archive'], true)) {
+            return;
+        }
+
         $recommendations = $service->recommend($variant, $limit * 3);
         if ($recommendations === []) {
             return;
         }
 
         $filtered = [];
+        $seenRecommended = [];
         foreach ($recommendations as $entry) {
             if (count($filtered) >= $limit) {
                 break;
@@ -136,6 +163,10 @@ class GenerateInventoryRecommendationsJob implements ShouldQueue
                 continue;
             }
 
+            if (isset($seenRecommended[$recommendedId])) {
+                continue;
+            }
+
             if ($this->containsExcludedStrings([
                 Arr::get($variantData, 'name'),
                 Arr::get($variantData, 'code'),
@@ -145,6 +176,8 @@ class GenerateInventoryRecommendationsJob implements ShouldQueue
             ])) {
                 continue;
             }
+
+            $seenRecommended[$recommendedId] = true;
 
             $filtered[] = [
                 'recommended_id' => $recommendedId,

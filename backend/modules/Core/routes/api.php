@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('settings/job-schedules', [JobScheduleController::class, 'index']);
         Route::post('settings/job-schedules', [JobScheduleController::class, 'store']);
         Route::put('settings/job-schedules/{schedule}', [JobScheduleController::class, 'update']);
+        Route::post('settings/job-schedules/{schedule}/run', [JobScheduleController::class, 'run']);
         Route::delete('settings/job-schedules/{schedule}', [JobScheduleController::class, 'destroy']);
         Route::get('settings/job-logs', [JobLogController::class, 'index']);
         Route::get('settings/automation/status', [AutomationStatusController::class, 'show']);

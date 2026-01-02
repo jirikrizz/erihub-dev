@@ -32,7 +32,7 @@ class JobLogController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $requestedSource = (string) $request->query('source', 'queue-worker');
+        $requestedSource = (string) $request->query('source', 'laravel');
         $limit = (int) $request->query('limit', 200);
         $limit = max(10, min($limit, 500));
 

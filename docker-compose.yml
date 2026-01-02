@@ -47,7 +47,7 @@ services:
     volumes:
       - ./backend:/var/www
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
     command: ["/usr/local/bin/start-container.sh", "php-fpm", "-F", "-R"]
 
   queue:
@@ -69,12 +69,12 @@ services:
     volumes:
       - ./backend:/var/www
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
     profiles: ["workers"]
     command: [
       "/bin/sh",
       "-lc",
-      "/usr/local/bin/start-container.sh php artisan queue:work --queue=snapshots,default --sleep=1 --tries=3 --timeout=3600 >> /var/www/storage/logs/queue-worker.log 2>&1"
+      "/usr/local/bin/start-container.sh php artisan queue:work --queue=snapshots,default --sleep=1 --tries=3 --timeout=7200 -v >> /var/www/storage/logs/queue-worker.log 2>&1"
     ]
 
   queue_microsites:
@@ -96,12 +96,12 @@ services:
     volumes:
       - ./backend:/var/www
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
     profiles: ["workers"]
     command: [
       "/bin/sh",
       "-lc",
-      "/usr/local/bin/start-container.sh php artisan queue:work --queue=microsites --sleep=1 --tries=3 --timeout=3600 >> /var/www/storage/logs/queue-worker.log 2>&1"
+      "/usr/local/bin/start-container.sh php artisan queue:work --queue=microsites --sleep=1 --tries=3 --timeout=7200 -v >> /var/www/storage/logs/queue-worker.log 2>&1"
     ]
 
   queue_orders:
@@ -123,12 +123,12 @@ services:
     volumes:
       - ./backend:/var/www
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
     profiles: ["workers"]
     command: [
       "/bin/sh",
       "-lc",
-      "/usr/local/bin/start-container.sh php artisan queue:work --queue=orders --sleep=1 --tries=3 --timeout=1200 >> /var/www/storage/logs/queue-worker.log 2>&1"
+      "/usr/local/bin/start-container.sh php artisan queue:work --queue=orders --sleep=1 --tries=3 --timeout=1200 -v >> /var/www/storage/logs/queue-worker.log 2>&1"
     ]
 
   queue_customers:
@@ -150,12 +150,39 @@ services:
     volumes:
       - ./backend:/var/www
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
     profiles: ["workers"]
     command: [
       "/bin/sh",
       "-lc",
-      "/usr/local/bin/start-container.sh php artisan queue:work --queue=customers,customers_metrics --sleep=1 --tries=3 --timeout=3600 >> /var/www/storage/logs/queue-worker.log 2>&1"
+      "/usr/local/bin/start-container.sh php artisan queue:work --queue=customers,customers_metrics --sleep=1 --tries=3 --timeout=7200 -v >> /var/www/storage/logs/queue-worker.log 2>&1"
+    ]
+
+  queue_inventory_recommendations:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+    env_file:
+      - ./backend/.env.docker
+    profiles: ["workers"]
+    command: [
+      "/bin/sh",
+      "-lc",
+      "/usr/local/bin/start-container.sh php artisan queue:work --queue=inventory_recommendations --sleep=1 --tries=3 --timeout=7200 -v >> /var/www/storage/logs/queue-worker.log 2>&1"
     ]
 
   scheduler:
@@ -177,7 +204,7 @@ services:
     volumes:
       - ./backend:/var/www
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
     profiles: ["workers"]
     command: [
       "/bin/sh",
@@ -192,7 +219,7 @@ services:
       backend:
         condition: service_started
     ports:
-      - "8085:80"
+      - "8080:80"
     volumes:
       - ./backend:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
@@ -208,7 +235,7 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     env_file:
-      - ./frontend/.env.local
+      - ./frontend/.env.${FRONTEND_ENV:-docker}
     depends_on:
       backend:
         condition: service_started

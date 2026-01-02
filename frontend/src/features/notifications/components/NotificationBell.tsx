@@ -19,7 +19,7 @@ import { formatDateTime, formatRelativeTime, moduleLabel, severityColor } from '
 import { useNotificationStore } from '../store';
 import classes from './NotificationBell.module.css';
 
-const MAX_PREVIEW = 6;
+const MAX_PREVIEW = 4;
 
 export const NotificationBell = () => {
   const navigate = useNavigate();
@@ -79,8 +79,8 @@ export const NotificationBell = () => {
           disabled={unreadCount === 0}
         >
           <ActionIcon
-            variant="gradient"
-            gradient={{ from: 'ocean', to: 'aurora', deg: 130 }}
+            variant="filled"
+            color="blue"
             onClick={toggle}
             size="lg"
             radius="xl"
@@ -115,50 +115,48 @@ export const NotificationBell = () => {
           ) : previewLogs.length ? (
             <ScrollArea.Autosize mah={280} offsetScrollbars className={classes.notificationList}>
               <Stack gap="xs" px="xs" pb="xs">
-                {previewLogs.map((log) => (
-                  <Paper
-                    key={log.id}
-                    p="xs"
-                    radius="md"
-                    withBorder
-                    className={classes.notificationItem}
-                    style={{
-                      backgroundColor:
-                        log.status === 'new'
-                          ? 'rgba(110, 148, 255, 0.12)'
-                          : 'rgba(249, 250, 255, 0.96)',
-                      cursor: log.status === 'new' ? 'pointer' : 'default',
-                      transition: 'background-color 160ms ease',
-                    }}
-                    onClick={() => {
-                      if (log.status === 'new') {
-                        void markAsRead(log.id);
-                      }
-                    }}
-                  >
-                    <Group justify="space-between" align="flex-start" gap="xs">
-                      <Stack gap={2} style={{ flex: 1 }}>
-                        <Group gap={6} align="center">
-                          <Badge color={severityColor[log.severity]} variant="light" size="sm">
-                            {moduleLabel[log.module]}
-                          </Badge>
-                          <Text size="xs" c="dimmed">
-                            {formatRelativeTime(log.createdAt)}
+                {previewLogs.map((log) => {
+                  const isNew = log.status === 'new';
+                  return (
+                    <Paper
+                      key={log.id}
+                      p="xs"
+                      radius="md"
+                      withBorder
+                      className={`${classes.notificationItem} ${
+                        isNew ? classes.notificationItemNew : classes.notificationItemRead
+                      }`}
+                      onClick={() => {
+                        if (isNew) {
+                          void markAsRead(log.id);
+                        }
+                      }}
+                      style={{ cursor: isNew ? 'pointer' : 'default' }}
+                    >
+                      <Group justify="space-between" align="flex-start" gap="xs">
+                        <Stack gap={2} style={{ flex: 1 }}>
+                          <Group gap={6} align="center">
+                            <Badge color={severityColor[log.severity]} variant="light" size="sm">
+                              {moduleLabel[log.module]}
+                            </Badge>
+                            <Text size="xs" c="dimmed">
+                              {formatRelativeTime(log.createdAt)}
+                            </Text>
+                          </Group>
+                          <Text fw={600} size="sm">
+                            {log.title}
                           </Text>
-                        </Group>
-                        <Text fw={600} size="sm">
-                          {log.title}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {log.message}
-                        </Text>
-                      </Stack>
-                      {log.status === 'new' ? (
-                        <IconCircleDashed size={16} color="var(--mantine-color-brand-6)" />
-                      ) : null}
-                    </Group>
-                  </Paper>
-                ))}
+                          <Text size="xs" c="dimmed">
+                            {log.message}
+                          </Text>
+                        </Stack>
+                        {isNew ? (
+                          <IconCircleDashed size={16} color="var(--mantine-color-brand-6)" />
+                        ) : null}
+                      </Group>
+                    </Paper>
+                  );
+                })}
               </Stack>
             </ScrollArea.Autosize>
           ) : (

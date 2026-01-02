@@ -165,7 +165,8 @@ class InventoryRecommendationService
 
         $candidateQuery = ProductVariant::query()
             ->with(['product'])
-            ->whereKeyNot($variant->getKey());
+            ->whereKeyNot($variant->getKey())
+            ->whereHas('product', fn ($q) => $q->whereNotIn('status', ['hidden', 'blocked', 'archived', 'archive']));
 
         if ($baseProduct?->shop_id) {
             $candidateQuery->whereHas('product', fn ($q) => $q->where('shop_id', $baseProduct->shop_id));
@@ -216,6 +217,10 @@ class InventoryRecommendationService
                 }
                 if (count($recommendations) >= $limit) {
                     break;
+                }
+
+                if (! $this->isProductVisible($candidate->relationLoaded('product') ? $candidate->product : null)) {
+                    continue;
                 }
 
                 if ($candidate->id === $variant->id || in_array($candidate->id, $selectedIds, true)) {
@@ -371,7 +376,8 @@ class InventoryRecommendationService
 
         $candidateQuery = ProductVariant::query()
             ->with(['product'])
-            ->whereKeyNot($variant->getKey());
+            ->whereKeyNot($variant->getKey())
+            ->whereHas('product', fn ($q) => $q->whereNotIn('status', ['hidden', 'blocked', 'archived', 'archive']));
 
         if ($baseProduct?->shop_id) {
             $candidateQuery->whereHas('product', fn ($q) => $q->where('shop_id', $baseProduct->shop_id));
@@ -393,6 +399,9 @@ class InventoryRecommendationService
                     foreach ($chunk as $candidate) {
                         if ($priorityCandidates->count() >= $limit * 5) {
                             return false;
+                        }
+                        if (! $this->isProductVisible($candidate->product)) {
+                            continue;
                         }
                         if ($baseProduct?->shop_id && $candidate->product?->shop_id && $candidate->product->shop_id !== $baseProduct->shop_id) {
                             continue;
@@ -477,6 +486,10 @@ class InventoryRecommendationService
             $candidateProduct = $candidate->relationLoaded('product')
                 ? $candidate->product
                 : $candidate->product()->first();
+
+            if (! $this->isProductVisible($candidateProduct)) {
+                continue;
+            }
 
             $score = 0.0;
             $breakdown = [
@@ -1121,6 +1134,17 @@ class InventoryRecommendationService
         }
 
         return $normalized;
+    }
+
+    private function isProductVisible(?Product $product): bool
+    {
+        if (! $product) {
+            return false;
+        }
+
+        $status = Str::lower((string) $product->status);
+
+        return ! in_array($status, ['hidden', 'blocked', 'archived', 'archive', 'draft'], true);
     }
 
     /**

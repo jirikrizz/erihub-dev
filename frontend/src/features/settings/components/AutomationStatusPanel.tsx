@@ -24,6 +24,51 @@ const formatRelativeTime = (value?: string | null) => {
   }
 };
 
+const describePipelineMeta = (meta?: Record<string, unknown> | null) => {
+  if (!meta) {
+    return '—';
+  }
+
+  const parts: string[] = [];
+
+  const number = (key: string) => {
+    const value = meta[key];
+    return typeof value === 'number' ? value : null;
+  };
+
+  const processed = number('processed_count') ?? number('orders_count') ?? number('products_count');
+  const variants = number('variants_updated') ?? number('variant_count');
+  const customers = number('customers_count');
+
+  if (processed !== null) {
+    parts.push(`zpracováno ${processed}`);
+  }
+
+  if (variants !== null) {
+    parts.push(`varianty ${variants}`);
+  }
+
+  if (customers !== null) {
+    parts.push(`zákazníci ${customers}`);
+  }
+
+  const lastChange = meta['last_change_time'];
+  if (typeof lastChange === 'string' && lastChange) {
+    parts.push(`poslední změna ${formatRelativeTime(lastChange)}`);
+  }
+
+  const windowMeta = meta['window'];
+  if (windowMeta && typeof windowMeta === 'object' && windowMeta !== null) {
+    const from = (windowMeta as Record<string, unknown>).from;
+    const to = (windowMeta as Record<string, unknown>).to;
+    if (typeof from === 'string' && typeof to === 'string') {
+      parts.push(`okno ${from} → ${to}`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : '—';
+};
+
 const QueueCard = ({
   name,
   pending,
@@ -149,6 +194,7 @@ export const AutomationStatusPanel = () => {
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Začátek</Table.Th>
                 <Table.Th>Konec</Table.Th>
+                <Table.Th>Detail</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -176,6 +222,11 @@ export const AutomationStatusPanel = () => {
                   </Table.Td>
                   <Table.Td>{formatRelativeTime(pipeline.started_at)}</Table.Td>
                   <Table.Td>{formatRelativeTime(pipeline.finished_at)}</Table.Td>
+                  <Table.Td>
+                    <Text size="xs" c="gray.7">
+                      {describePipelineMeta(pipeline.meta)}
+                    </Text>
+                  </Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>

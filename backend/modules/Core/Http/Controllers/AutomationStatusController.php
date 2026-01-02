@@ -15,6 +15,8 @@ class AutomationStatusController extends Controller
     private const MONITORED_LOGS = [
         'queue_worker' => 'logs/queue-worker.log',
         'job_schedules' => 'logs/job-schedules.log',
+        'laravel' => 'logs/laravel.log',
+        'orders_recalc' => 'logs/orders-recalc.log',
     ];
 
     private const KNOWN_QUEUES = [

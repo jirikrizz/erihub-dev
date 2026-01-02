@@ -1,6 +1,7 @@
 import { AreaChart } from '@mantine/charts';
 import {
   Alert,
+  Box,
   Button,
   Card,
   Grid,
@@ -847,18 +848,22 @@ export const AnalyticsPage = () => {
                   </Text>
                   {ordersFetching && <Loader size="sm" />}
                 </Group>
-                <AreaChart
-                  h={260}
-                  data={(ordersData?.time_series ?? []).map((entry) => ({
-                    label: entry.label,
-                    revenue: entry.revenue,
-                  }))}
-                  dataKey="label"
-                  series={[{ name: 'revenue', label: `Obrat (${ordersBaseCurrency})`, color: 'indigo.5' }]}
-                  curveType="monotone"
-                  withDots={false}
-                  withLegend
-                />
+                <Box style={{ minHeight: 260, minWidth: 0 }}>
+                  <AreaChart
+                    h={260}
+                    data={(ordersData?.time_series ?? []).map((entry) => ({
+                      label: entry.label,
+                      revenue: entry.revenue,
+                    }))}
+                    dataKey="label"
+                    series={[
+                      { name: 'revenue', label: `Obrat (${ordersBaseCurrency})`, color: 'indigo.5' },
+                    ]}
+                    curveType="monotone"
+                    withDots={false}
+                    withLegend
+                  />
+                </Box>
               </Stack>
             </Card>
 

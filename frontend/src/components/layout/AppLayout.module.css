@@ -1,6 +1,8 @@
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 90;
   color: var(--app-text-primary);
   background: var(--app-surface-header);
@@ -55,16 +57,10 @@
 
 .sidebarToggle {
   box-shadow: none;
-  transition: transform 160ms ease;
-}
-
-.sidebarToggle:hover {
-  transform: translateY(-1px);
 }
 
 .navbar {
   height: 100%;
-  transition: width 160ms ease;
 }
 
 .navbarCollapsed .navHeader,
@@ -141,7 +137,7 @@
 
 .navGroup {
   border-radius: 18px;
-  padding: calc(var(--mantine-spacing-md) * 0.52) calc(var(--mantine-spacing-md) * 0.55);
+  padding: calc(var(--mantine-spacing-md) * 0.42) calc(var(--mantine-spacing-md) * 0.48);
   background: var(--app-surface-nav);
   border: 1px solid var(--app-border-subtle);
   display: flex;
@@ -200,23 +196,21 @@
   border-radius: 16px;
   font-weight: 600;
   color: var(--app-text-secondary);
-  padding-block: calc(var(--mantine-spacing-xs) * 0.75);
-  padding-inline: calc(var(--mantine-spacing-sm) * 0.6);
+  padding-block: calc(var(--mantine-spacing-xs) * 0.55);
+  padding-inline: calc(var(--mantine-spacing-sm) * 0.5);
   border: 1px solid transparent;
-  transition: transform 160ms ease, background 160ms ease, border 160ms ease, color 160ms ease;
   white-space: normal;
 }
 
 .navLink:hover {
-  transform: translateX(2px);
   border-color: var(--app-border-subtle);
-  background: rgba(118, 148, 255, 0.14);
+  background: transparent;
 }
 
 .navLink[data-active] {
   color: var(--app-text-primary);
-  border-color: transparent;
-  background: rgba(126, 156, 255, 0.26);
+  border-color: var(--app-border-subtle);
+  background: none;
 }
 
 .navLinkLabel {
@@ -258,11 +252,6 @@
 }
 
 .userIconButton {
-  transition: transform 160ms ease;
-}
-
-.userIconButton:hover {
-  transform: translateY(-1px);
 }
 
 .userAvatar {
@@ -282,16 +271,11 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(118, 140, 190, 0.28);
-  transition: transform 160ms ease, background 160ms ease, border 160ms ease;
 }
 
 [data-theme='dark'] .userMenuTrigger {
   background: rgba(26, 32, 48, 0.92);
   border-color: rgba(160, 182, 238, 0.24);
-}
-
-.userMenuTrigger:hover {
-  transform: translateY(-1px);
 }
 
 .userMenuMeta {
@@ -373,7 +357,6 @@
   letter-spacing: -0.01em;
   background: var(--app-surface-panel);
   border: 1px solid var(--app-border-subtle);
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease, opacity 160ms ease;
   min-width: 88px;
   scroll-snap-align: center;
 }
@@ -381,19 +364,16 @@
 .mobileNavButton span {
   margin-top: 2px;
   opacity: 0.78;
-  transition: opacity 160ms ease;
   white-space: nowrap;
 }
 
 .mobileNavButton svg {
-  transition: transform 160ms ease;
 }
 
 .mobileNavButton[data-active],
 .mobileNavButton:hover {
   background: var(--app-gradient-accent);
   color: var(--app-text-inverse);
-  transform: translateY(-2px);
 }
 
 .mobileNavButton[data-active] span,
@@ -403,12 +383,12 @@
 
 .mobileNavButton[data-active] svg,
 .mobileNavButton:hover svg {
-  transform: translateY(-1px) scale(1.04);
 }
 
 .mainArea {
   position: relative;
   z-index: 0;
+  padding-top: 88px;
 }
 
 .mainScroller {
@@ -447,6 +427,10 @@
 @media (max-width: 62em) {
   .header {
     padding-block: 10px;
+  }
+
+  .mainArea {
+    padding-top: 72px;
   }
 
   .navIntro,

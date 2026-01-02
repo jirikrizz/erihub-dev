@@ -98,38 +98,38 @@ const cssVariables: Record<ThemeMode, Record<string, string>> = {
     '--app-heading-secondary': '#4a5976',
   },
   dark: {
-    '--app-surface-root': '#0b0f18',
-    '--app-surface-header': 'rgba(14, 18, 28, 0.94)',
+    '--app-surface-root': '#0d121d',
+    '--app-surface-header': 'rgba(15, 22, 36, 0.96)',
     '--app-surface-header-glow': 'none',
-    '--app-surface-nav': 'rgba(30, 38, 60, 0.9)',
-    '--app-surface-panel': 'rgba(32, 42, 62, 0.94)',
-    '--app-surface-card': 'rgba(36, 48, 72, 0.95)',
-    '--app-surface-input': 'rgba(48, 62, 96, 0.88)',
-    '--app-input-border': 'rgba(148, 172, 236, 0.28)',
-    '--app-input-border-strong': 'rgba(168, 194, 255, 0.45)',
+    '--app-surface-nav': '#121a2c',
+    '--app-surface-panel': '#141e31',
+    '--app-surface-card': '#18233a',
+    '--app-surface-input': '#1c2941',
+    '--app-input-border': 'rgba(136, 158, 216, 0.24)',
+    '--app-input-border-strong': 'rgba(168, 194, 255, 0.38)',
     '--app-input-shadow': 'none',
     '--app-input-shadow-focus': 'none',
-    '--app-input-placeholder': 'rgba(170, 186, 240, 0.72)',
-    '--app-surface-frost': 'rgba(48, 60, 94, 0.84)',
-    '--app-surface-elevated': 'rgba(38, 49, 76, 0.96)',
-    '--app-border-subtle': 'rgba(148, 172, 236, 0.26)',
-    '--app-border-strong': 'rgba(168, 194, 255, 0.5)',
-    '--app-divider': 'rgba(138, 164, 230, 0.32)',
-    '--app-text-primary': '#f5f8ff',
-    '--app-text-secondary': '#d1dcff',
-    '--app-text-tertiary': '#aabaf0',
-    '--app-text-inverse': '#111521',
+    '--app-input-placeholder': 'rgba(180, 196, 240, 0.72)',
+    '--app-surface-frost': '#1b253a',
+    '--app-surface-elevated': '#1a2337',
+    '--app-border-subtle': 'rgba(128, 148, 200, 0.22)',
+    '--app-border-strong': 'rgba(160, 186, 242, 0.42)',
+    '--app-divider': 'rgba(132, 158, 224, 0.3)',
+    '--app-text-primary': '#f6f8ff',
+    '--app-text-secondary': '#d6dffa',
+    '--app-text-tertiary': '#b5c3ee',
+    '--app-text-inverse': '#0f141e',
     '--app-shadow-soft': 'none',
     '--app-shadow-strong': 'none',
-    '--app-gradient-accent': 'rgba(128, 150, 255, 0.28)',
+    '--app-gradient-accent': 'rgba(128, 150, 255, 0.16)',
     '--app-surface-main-gradient': 'none',
-    '--app-selection-bg': 'rgba(128, 150, 255, 0.38)',
-    '--app-selection-color': '#0f141f',
-    '--app-scrollbar': 'rgba(140, 158, 220, 0.45)',
-    '--app-mobile-footer-bg': 'rgba(21, 27, 40, 0.92)',
-    '--app-table-header-bg': 'rgba(33, 41, 64, 0.76)',
+    '--app-selection-bg': 'rgba(128, 150, 255, 0.28)',
+    '--app-selection-color': '#0e1524',
+    '--app-scrollbar': 'rgba(140, 158, 220, 0.36)',
+    '--app-mobile-footer-bg': '#111828',
+    '--app-table-header-bg': '#141d30',
     '--app-heading-primary': '#f5f8ff',
-    '--app-heading-secondary': 'rgba(218, 226, 255, 0.85)',
+    '--app-heading-secondary': 'rgba(210, 222, 255, 0.82)',
   },
 };
 
@@ -138,8 +138,7 @@ const INPUT_RADIUS = '18px';
 
 const focusRingStyles = {
   borderColor: 'var(--app-input-border-strong)',
-  boxShadow: 'var(--app-input-shadow-focus)',
-  transform: 'translateY(-1px)',
+  boxShadow: 'none',
 };
 
 const baseInputStyles = {
@@ -153,7 +152,7 @@ const baseInputStyles = {
   paddingInline: '18px',
   paddingBlock: '12px',
   fontSize: '0.95rem',
-  transition: 'border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease',
+  transition: 'border-color 140ms ease',
 };
 
 const baseInputLabelStyles = {
@@ -186,6 +185,13 @@ export const buildTheme = (mode: ThemeMode): MantineThemeOverride =>
     },
     defaultRadius: 'lg',
     defaultGradient: { from: ocean[5], to: ocean[5], deg: 0 },
+    shadows: {
+      xs: 'none',
+      sm: 'none',
+      md: 'none',
+      lg: 'none',
+      xl: 'none',
+    },
     fontFamily:
       "'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
     fontFamilyMonospace: "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace",
@@ -208,13 +214,6 @@ export const buildTheme = (mode: ThemeMode): MantineThemeOverride =>
       md: '56em',
       lg: '72em',
       xl: '90em',
-    },
-    shadows: {
-      xs: 'none',
-      sm: 'none',
-      md: 'none',
-      lg: 'none',
-      xl: 'none',
     },
     components: {
       Input: {
@@ -510,7 +509,7 @@ export const buildTheme = (mode: ThemeMode): MantineThemeOverride =>
             color: 'var(--app-text-secondary)',
             border: 'none',
             paddingInline: '1.1rem',
-            transition: 'color 140ms ease, background 140ms ease, box-shadow 140ms ease',
+            transition: 'color 140ms ease, background 140ms ease',
           },
         }),
       },
@@ -690,7 +689,7 @@ export const getGlobalStyles = (mode: ThemeMode): Interpolation<EmotionTheme> =>
       paddingInline: '18px',
       paddingBlock: '12px',
       fontSize: '0.95rem',
-      transition: 'border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease',
+      transition: 'border-color 140ms ease',
     },
     '.mantine-Input-input::placeholder': {
       color: 'var(--app-input-placeholder)',
@@ -710,7 +709,7 @@ export const getGlobalStyles = (mode: ThemeMode): Interpolation<EmotionTheme> =>
     },
     '.mantine-Input-input[data-invalid]': {
       borderColor: '#f04d43',
-      boxShadow: '0 0 0 3px rgba(240, 77, 67, 0.25)',
+      boxShadow: 'none',
     },
     '.mantine-Input-input[data-disabled]': {
       opacity: 0.6,
@@ -746,7 +745,7 @@ export const getGlobalStyles = (mode: ThemeMode): Interpolation<EmotionTheme> =>
       color: 'var(--app-text-secondary)',
       border: 'none',
       paddingInline: '1.1rem',
-      transition: 'color 140ms ease, background 140ms ease, box-shadow 140ms ease',
+      transition: 'color 140ms ease, background 140ms ease',
     },
     '.mantine-Tabs-tab:hover': {
       color: 'var(--app-text-primary)',
@@ -754,7 +753,13 @@ export const getGlobalStyles = (mode: ThemeMode): Interpolation<EmotionTheme> =>
     '.mantine-Tabs-tab[data-active]': {
       background: 'var(--app-gradient-accent)',
       color: 'var(--app-text-inverse)',
-      boxShadow: '0 14px 28px rgba(48, 74, 150, 0.24)',
+      boxShadow: 'none',
+    },
+    '.mantine-Card-root, .mantine-Paper-root, .mantine-Modal-content, .mantine-Drawer-content, .mantine-Popover-dropdown, .mantine-Menu-dropdown, .mantine-HoverCard-dropdown, .mantine-Notification-root': {
+      backgroundColor: 'var(--app-surface-card) !important',
+      backgroundImage: 'none !important',
+      boxShadow: 'none !important',
+      border: '1px solid var(--app-border-subtle) !important',
     },
   };
 };

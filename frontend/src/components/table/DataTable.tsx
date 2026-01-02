@@ -69,7 +69,6 @@ export function DataTable<TData>({
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    columnResizeMode: 'onChange',
   });
 
   const rows = table.getRowModel().rows;

@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useJobLogs } from '../hooks/useJobLogs';
 
 const LOG_LIMIT = 200;
-const DEFAULT_SOURCE = 'queue-worker';
+const DEFAULT_SOURCE = 'laravel';
 
 const formatTimestamp = (value?: string | null): string | null => {
   if (!value) {

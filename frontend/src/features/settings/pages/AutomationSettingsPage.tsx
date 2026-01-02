@@ -11,6 +11,7 @@ import {
   useCreateJobSchedule,
   useDeleteJobSchedule,
   useJobSchedules,
+  useRunJobSchedule,
   useUpdateJobSchedule,
 } from '../hooks/useJobSchedules';
 import { useShops } from '../../shoptet/hooks/useShops';
@@ -21,9 +22,11 @@ export const AutomationSettingsPage = () => {
   const createSchedule = useCreateJobSchedule();
   const updateSchedule = useUpdateJobSchedule();
   const deleteSchedule = useDeleteJobSchedule();
+  const runSchedule = useRunJobSchedule();
 
   const [savingJobType, setSavingJobType] = useState<string | null>(null);
   const [deletingScheduleId, setDeletingScheduleId] = useState<string | null>(null);
+  const [runningScheduleId, setRunningScheduleId] = useState<string | null>(null);
 
   const shops: Shop[] = shopsResponse?.data ?? [];
 
@@ -110,6 +113,28 @@ export const AutomationSettingsPage = () => {
     [deleteSchedule]
   );
 
+  const handleRun = useCallback(
+    async (job: JobScheduleCatalogEntry, scheduleId: string) => {
+      setRunningScheduleId(scheduleId);
+      try {
+        await runSchedule.mutateAsync(scheduleId);
+        notifications.show({
+          message: `Plán „${job.label}“ byl spuštěn.`,
+          color: 'green',
+        });
+      } catch (error) {
+        console.error(error);
+        notifications.show({
+          message: `Plán „${job.label}“ se nepodařilo spustit.`,
+          color: 'red',
+        });
+      } finally {
+        setRunningScheduleId(null);
+      }
+    },
+    [runSchedule]
+  );
+
   if (jobSchedulesQuery.isLoading) {
     return (
       <Center py="xl">
@@ -168,6 +193,7 @@ export const AutomationSettingsPage = () => {
           const savingForJob = isSaving && savingJobType === job.job_type;
           const disableForJob = isSaving && savingJobType !== null && savingJobType !== job.job_type;
           const deletingForJob = deleteSchedule.isPending && deletingScheduleId === scheduleId;
+          const runningForJob = runSchedule.isPending && runningScheduleId === scheduleId;
 
           return (
             <AutomationJobCard
@@ -176,9 +202,11 @@ export const AutomationSettingsPage = () => {
               shops={shops}
               onSubmit={(payload) => handleSave(job, payload)}
               onDelete={scheduleId ? (id) => handleDelete(job, id) : undefined}
+              onRun={scheduleId ? () => handleRun(job, scheduleId) : undefined}
               saving={savingForJob}
               disabled={disableForJob}
               deleting={deletingForJob}
+              running={runningForJob}
             />
           );
         })}

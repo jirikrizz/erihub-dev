@@ -41,6 +41,17 @@ class JobScheduleCatalog
                 'lookback_hours' => 48,
             ],
         ],
+        'orders.refresh_statuses_deep' => [
+            'label' => 'Aktualizace stavů objednávek (hluboká)',
+            'description' => 'Jednou denně zkontroluje stav objednávek hluboko do minulosti.',
+            'default_frequency' => JobScheduleFrequency::DAILY,
+            'default_cron' => '0 3 * * *',
+            'default_timezone' => 'Europe/Prague',
+            'supports_shop' => true,
+            'default_options' => [
+                'lookback_hours' => 720,
+            ],
+        ],
         'products.import_master' => [
             'label' => 'Import produktů z master e-shopu',
             'description' => 'Importuje nové produkty z master e-shopu a udržuje katalog aktuální.',

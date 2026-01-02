@@ -65,6 +65,7 @@ class AnalyticsController extends Controller
         $ordersQuery = (clone $baseOrdersQuery);
         $this->applyCompletedOrderFilter($ordersQuery);
 
+        $ordersTotal = (clone $ordersQuery)->count();
         $ordersWithTotal = (clone $ordersQuery)->whereNotNull('total_with_vat');
 
         $perCurrencyTotals = (clone $ordersWithTotal)
@@ -98,79 +99,11 @@ class AnalyticsController extends Controller
 
         $ordersAverageValue = $totalOrdersCount > 0 ? $ordersTotalValue / $totalOrdersCount : 0.0;
 
-        $currentCustomersBase = (clone $baseOrdersQuery)
-            ->whereNotNull('customer_email')
-            ->selectRaw('customer_email')
-            ->selectRaw('COUNT(*) as orders_in_period')
-            ->selectRaw('COALESCE(SUM(COALESCE(total_with_vat_base, total_with_vat)), 0) as revenue_in_period')
-            ->selectRaw('MIN(ordered_at) as first_order_in_period')
-            ->groupBy('customer_email');
-
-        $currentCustomersData = $currentCustomersBase->get();
-
-        $uniqueCustomersCount = $currentCustomersData->count();
-        $repeatCustomersWithinPeriod = $currentCustomersData->filter(static fn ($row) => (int) ($row->orders_in_period ?? 0) > 1)->count();
-
-        $emails = $currentCustomersData
-            ->pluck('customer_email')
-            ->filter()
-            ->unique()
-            ->values();
-
-        $earliestOrders = collect();
-
-        if ($emails->isNotEmpty()) {
-            $earliestOrders = Order::query()
-                ->select('customer_email')
-                ->selectRaw('MIN(ordered_at) as earliest_order_at')
-                ->whereIn('customer_email', $emails)
-                ->when($shopIds !== [], function (Builder $query) use ($shopIds) {
-                    $query->whereIn('shop_id', $shopIds);
-                })
-                ->groupBy('customer_email')
-                ->pluck('earliest_order_at', 'customer_email');
-        }
-
-        $historicReturning = $currentCustomersData->filter(function ($row) use ($earliestOrders) {
-            $email = $row->customer_email;
-
-            if (! $email) {
-                return false;
-            }
-
-            $earliest = $earliestOrders->get($email);
-
-            if (! $earliest) {
-                return false;
-            }
-
-            return CarbonImmutable::parse($earliest)->lt(CarbonImmutable::parse($row->first_order_in_period));
-        });
-
-        $historicReturningCustomersCount = $historicReturning->count();
-        $historicReturningOrdersCount = $historicReturning->sum(fn ($row) => (int) ($row->orders_in_period ?? 0));
-        $historicReturningRevenueBase = $historicReturning->sum(fn ($row) => (float) ($row->revenue_in_period ?? 0.0));
-
-        $historicEmailsArray = $historicReturning->pluck('customer_email')->filter()->unique()->values()->all();
-        $historicEmails = array_fill_keys($historicEmailsArray, true);
-
-        $newCustomers = $currentCustomersData->filter(function ($row) use ($historicEmails) {
-            $email = $row->customer_email;
-
-            if (! $email) {
-                return false;
-            }
-
-            return ! isset($historicEmails[$email]);
-        });
-
-        $newCustomersCount = $newCustomers->count();
-        $newOrdersFromNewCustomers = $newCustomers->sum(fn ($row) => (int) ($row->orders_in_period ?? 0));
-        $newRevenueFromNewCustomers = $newCustomers->sum(fn ($row) => (float) ($row->revenue_in_period ?? 0.0));
-
-        $customersRepeatRatio = $uniqueCustomersCount > 0
-            ? $historicReturningCustomersCount / $uniqueCustomersCount
-            : 0.0;
+        $customerMetrics = $this->buildCustomerMetrics(
+            baseOrdersQuery: clone $baseOrdersQuery,
+            shopIds: $shopIds,
+            completedOrdersTotal: $ordersTotal
+        );
 
         $orderItemsQuery = OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id');
@@ -190,39 +123,29 @@ class AnalyticsController extends Controller
         $this->orderStatusResolver->applyCompletedFilter($orderItemsQuery, 'orders.status');
 
         $productsSoldTotal = (float) (clone $orderItemsQuery)->sum('order_items.amount');
-        $ordersWithoutEmailTotal = (clone $baseOrdersQuery)->whereNull('customer_email')->count();
-
-        $returningOrdersCount = (int) $historicReturningOrdersCount;
-        $returningRevenueBase = (float) $historicReturningRevenueBase;
-        $newOrdersCount = (int) $newOrdersFromNewCustomers;
-        $newRevenueBase = (float) $newRevenueFromNewCustomers;
-
-        $customersOrdersAverage = $uniqueCustomersCount > 0
-            ? (clone $ordersQuery)->count() / $uniqueCustomersCount
-            : 0.0;
 
         return response()->json([
             'products_total' => (clone $productsQuery)->count(),
             'webhooks_downloaded' => (clone $webhooksQuery)->where('status', 'downloaded')->count(),
             'webhooks_failed' => (clone $webhooksQuery)->where('status', 'download_failed')->count(),
-            'orders_total' => (clone $ordersQuery)->count(),
+            'orders_total' => $ordersTotal,
             'orders_total_value' => (float) $ordersTotalValue,
             'orders_average_value' => (float) $ordersAverageValue,
             'orders_base_currency' => $this->currencyConverter->getBaseCurrency(),
             'orders_value_by_currency' => $ordersValueByCurrency,
             'customers_total' => (clone $customersQuery)->count(),
             'products_sold_total' => $productsSoldTotal,
-            'customers_repeat_ratio' => $customersRepeatRatio,
-            'returning_customers_total' => $historicReturningCustomersCount,
-            'repeat_customers_period_total' => $repeatCustomersWithinPeriod,
-            'unique_customers_total' => $uniqueCustomersCount,
-            'new_customers_total' => $newCustomersCount,
-            'orders_without_email_total' => $ordersWithoutEmailTotal,
-            'returning_orders_total' => $returningOrdersCount,
-            'returning_revenue_base' => round($returningRevenueBase, 2),
-            'new_orders_total' => $newOrdersCount,
-            'new_revenue_base' => round($newRevenueBase, 2),
-            'customers_orders_average' => round($customersOrdersAverage, 2),
+            'customers_repeat_ratio' => $customerMetrics['customers_repeat_ratio'],
+            'returning_customers_total' => $customerMetrics['returning_customers_total'],
+            'repeat_customers_period_total' => $customerMetrics['repeat_customers_period_total'],
+            'unique_customers_total' => $customerMetrics['unique_customers_total'],
+            'new_customers_total' => $customerMetrics['new_customers_total'],
+            'orders_without_email_total' => $customerMetrics['orders_without_email_total'],
+            'returning_orders_total' => $customerMetrics['returning_orders_total'],
+            'returning_revenue_base' => round($customerMetrics['returning_revenue_base'], 2),
+            'new_orders_total' => $customerMetrics['new_orders_total'],
+            'new_revenue_base' => round($customerMetrics['new_revenue_base'], 2),
+            'customers_orders_average' => round($customerMetrics['customers_orders_average'], 2),
         ]);
     }
 
@@ -633,6 +556,80 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    private function buildCustomerMetrics(Builder $baseOrdersQuery, array $shopIds, int $completedOrdersTotal): array
+    {
+        // Keep the heavy lifting in SQL so large ranges don't pull every customer email into PHP memory.
+        $ordersWithoutEmailTotal = (clone $baseOrdersQuery)->whereNull('customer_email')->count();
+
+        $currentCustomersBase = (clone $baseOrdersQuery)
+            ->whereNotNull('customer_email')
+            ->selectRaw('customer_email')
+            ->selectRaw('COUNT(*) as orders_in_period')
+            ->selectRaw('COALESCE(SUM(COALESCE(total_with_vat_base, total_with_vat)), 0) as revenue_in_period')
+            ->selectRaw('MIN(ordered_at) as first_order_in_period')
+            ->groupBy('customer_email');
+
+        $firstOrdersSub = DB::table('orders as root_orders')
+            ->selectRaw('root_orders.customer_email')
+            ->selectRaw('MIN(root_orders.ordered_at) as first_order_overall')
+            ->whereNotNull('root_orders.customer_email')
+            ->groupBy('root_orders.customer_email');
+
+        if ($shopIds !== []) {
+            $firstOrdersSub->whereIn('root_orders.shop_id', $shopIds);
+        }
+
+        $aggregates = DB::query()
+            ->fromSub($currentCustomersBase, 'current')
+            ->leftJoinSub($firstOrdersSub, 'first_orders', 'first_orders.customer_email', '=', 'current.customer_email')
+            ->selectRaw('COUNT(*) as unique_customers')
+            ->selectRaw('SUM(CASE WHEN current.orders_in_period > 1 THEN 1 ELSE 0 END) as repeat_customers_in_period')
+            ->selectRaw('SUM(CASE WHEN first_orders.first_order_overall IS NOT NULL AND first_orders.first_order_overall < current.first_order_in_period THEN 1 ELSE 0 END) as returning_customers')
+            ->selectRaw('SUM(CASE WHEN first_orders.first_order_overall IS NOT NULL AND first_orders.first_order_overall < current.first_order_in_period THEN current.orders_in_period ELSE 0 END) as returning_orders')
+            ->selectRaw('SUM(CASE WHEN first_orders.first_order_overall IS NOT NULL AND first_orders.first_order_overall < current.first_order_in_period THEN current.revenue_in_period ELSE 0 END) as returning_revenue')
+            ->selectRaw('SUM(CASE WHEN first_orders.first_order_overall IS NULL OR first_orders.first_order_overall >= current.first_order_in_period THEN 1 ELSE 0 END) as new_customers')
+            ->selectRaw('SUM(CASE WHEN first_orders.first_order_overall IS NULL OR first_orders.first_order_overall >= current.first_order_in_period THEN current.orders_in_period ELSE 0 END) as new_orders')
+            ->selectRaw('SUM(CASE WHEN first_orders.first_order_overall IS NULL OR first_orders.first_order_overall >= current.first_order_in_period THEN current.revenue_in_period ELSE 0 END) as new_revenue')
+            ->first();
+
+        if (! $aggregates) {
+            return [
+                'unique_customers_total' => 0,
+                'repeat_customers_period_total' => 0,
+                'returning_customers_total' => 0,
+                'returning_orders_total' => 0,
+                'returning_revenue_base' => 0.0,
+                'new_customers_total' => 0,
+                'new_orders_total' => 0,
+                'new_revenue_base' => 0.0,
+                'customers_repeat_ratio' => 0.0,
+                'orders_without_email_total' => $ordersWithoutEmailTotal,
+                'customers_orders_average' => 0.0,
+            ];
+        }
+
+        $uniqueCustomersCount = (int) ($aggregates->unique_customers ?? 0);
+        $returningCustomersCount = (int) ($aggregates->returning_customers ?? 0);
+
+        return [
+            'unique_customers_total' => $uniqueCustomersCount,
+            'repeat_customers_period_total' => (int) ($aggregates->repeat_customers_in_period ?? 0),
+            'returning_customers_total' => $returningCustomersCount,
+            'returning_orders_total' => (int) ($aggregates->returning_orders ?? 0),
+            'returning_revenue_base' => (float) ($aggregates->returning_revenue ?? 0.0),
+            'new_customers_total' => (int) ($aggregates->new_customers ?? 0),
+            'new_orders_total' => (int) ($aggregates->new_orders ?? 0),
+            'new_revenue_base' => (float) ($aggregates->new_revenue ?? 0.0),
+            'customers_repeat_ratio' => $uniqueCustomersCount > 0
+                ? $returningCustomersCount / $uniqueCustomersCount
+                : 0.0,
+            'orders_without_email_total' => $ordersWithoutEmailTotal,
+            'customers_orders_average' => $uniqueCustomersCount > 0
+                ? $completedOrdersTotal / $uniqueCustomersCount
+                : 0.0,
+        ];
+    }
+
     private function parseDate(?string $value, bool $endOfDay = false): ?CarbonImmutable
     {
         if (! $value) {
@@ -654,39 +651,52 @@ class AnalyticsController extends Controller
 
     private function buildOrderTimeSeries(Builder $ordersQuery, string $groupBy, string $baseCurrency): array
     {
+        // Aggregate in SQL to avoid iterating every order when the range is large.
+        $truncExpression = match ($groupBy) {
+            'week' => "DATE_TRUNC('week', orders.ordered_at)",
+            'month' => "DATE_TRUNC('month', orders.ordered_at)",
+            'year' => "DATE_TRUNC('year', orders.ordered_at)",
+            default => "DATE_TRUNC('day', orders.ordered_at)",
+        };
+
+        $rows = (clone $ordersQuery)
+            ->whereNotNull('orders.ordered_at')
+            ->selectRaw("{$truncExpression} as bucket_date")
+            ->selectRaw('COALESCE(orders.currency_code, ?) as currency_code', [$baseCurrency])
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('SUM(COALESCE(orders.total_with_vat_base, 0)) as revenue_base_sum')
+            ->selectRaw('SUM(CASE WHEN orders.total_with_vat_base IS NULL THEN orders.total_with_vat ELSE 0 END) as revenue_without_base')
+            ->groupBy('bucket_date', 'currency_code')
+            ->orderBy('bucket_date')
+            ->get();
+
         $buckets = [];
 
-        (clone $ordersQuery)
-            ->select(['orders.id', 'orders.ordered_at', 'orders.currency_code', 'orders.total_with_vat', 'orders.total_with_vat_base'])
-            ->whereNotNull('orders.ordered_at')
-            ->orderBy('orders.ordered_at')
-            ->chunk(1000, function ($orders) use (&$buckets, $groupBy, $baseCurrency) {
-                foreach ($orders as $order) {
-                    if (! $order->ordered_at) {
-                        continue;
-                    }
+        foreach ($rows as $row) {
+            if (! $row->bucket_date) {
+                continue;
+            }
 
-                    $date = CarbonImmutable::parse($order->ordered_at);
-                    $bucketDate = $this->normaliseDate($date, $groupBy);
-                    $key = $this->periodKey($bucketDate, $groupBy);
+            $date = CarbonImmutable::parse($row->bucket_date);
+            $key = $this->periodKey($date, $groupBy);
+            $currency = $row->currency_code ?? $baseCurrency;
+            $revenueBase = (float) ($row->revenue_base_sum ?? 0.0);
+            $revenueToConvert = (float) ($row->revenue_without_base ?? 0.0);
+            $revenueBase += $revenueToConvert > 0
+                ? ($this->currencyConverter->convertToBase($revenueToConvert, $currency) ?? 0.0)
+                : 0.0;
 
-                    $currency = $order->currency_code ?? $baseCurrency;
-                    $revenue = $order->total_with_vat_base !== null
-                        ? (float) $order->total_with_vat_base
-                        : ($this->currencyConverter->convertToBase((float) ($order->total_with_vat ?? 0.0), $currency) ?? 0.0);
+            if (! isset($buckets[$key])) {
+                $buckets[$key] = [
+                    'date' => $date,
+                    'orders_count' => 0,
+                    'revenue' => 0.0,
+                ];
+            }
 
-                    if (! isset($buckets[$key])) {
-                        $buckets[$key] = [
-                            'date' => $bucketDate,
-                            'orders_count' => 0,
-                            'revenue' => 0.0,
-                        ];
-                    }
-
-                    $buckets[$key]['orders_count']++;
-                    $buckets[$key]['revenue'] += $revenue;
-                }
-            });
+            $buckets[$key]['orders_count'] += (int) ($row->orders_count ?? 0);
+            $buckets[$key]['revenue'] += $revenueBase;
+        }
 
         uasort($buckets, fn ($a, $b) => $a['date']->timestamp <=> $b['date']->timestamp);
 

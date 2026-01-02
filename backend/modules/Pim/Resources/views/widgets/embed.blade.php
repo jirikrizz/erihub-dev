@@ -620,8 +620,8 @@
                             $matchReasons[] = 'Značka originálu: '.$defaultInspiredBrand;
                         }
 
-                        $priceCurrentInt = $extractInt($price['current'] ?? null);
-                        $priceOriginalInt = $extractInt($price['original'] ?? null);
+                        $priceCurrentInt = $extractInt($price['action_price'] ?? $price['current'] ?? null);
+                        $priceOriginalInt = $extractInt($price['base_price'] ?? $price['original'] ?? null);
                         $priceDiscountPercent = $extractInt($price['discount'] ?? null);
                         if ($priceDiscountPercent === null && $priceCurrentInt !== null && $priceOriginalInt !== null && $priceOriginalInt > 0) {
                             $priceDiscountPercent = (int) round(max(0, 100 - ($priceCurrentInt / $priceOriginalInt) * 100));
@@ -674,8 +674,8 @@
                             }
 
                             $optionVariantId = $option['variant_id'] ?? $option['id'] ?? null;
-                            $optionPriceInt = $extractInt($option['variant_price'] ?? $option['price'] ?? null);
-                            $optionOriginalInt = $extractInt($option['variant_original_price'] ?? $option['original_price'] ?? null);
+                            $optionPriceInt = $extractInt($option['variant_action_price'] ?? $option['action_price'] ?? $option['variant_price'] ?? $option['price'] ?? null);
+                            $optionOriginalInt = $extractInt($option['base_price'] ?? $option['variant_original_price'] ?? $option['original_price'] ?? null);
                             $optionDiscountPercent = $optionPriceInt !== null && $optionOriginalInt !== null && $optionOriginalInt > 0
                                 ? (int) round(max(0, 100 - ($optionPriceInt / $optionOriginalInt) * 100))
                                 : null;
@@ -686,7 +686,9 @@
                             $optionVolumeLabel = $option['volume_display'] ?? ($normalizeVolume)($optionVolume, null, $option['label'] ?? $optionVolume ?? null);
                             $optionVolumeAttribute = $option['volume_attribute'] ?? $option['volume_value'] ?? $optionVolumeLabel;
                             $optionUrl = $option['detail_url'] ?? $option['variant_url'] ?? $option['url'] ?? null;
-                            $optionPriceDisplay = $option['variant_price_display']
+                            $optionPriceDisplay = $option['variant_action_price']
+                                ?? $option['action_price']
+                                ?? $option['variant_price_display']
                                 ?? $option['variant_price']
                                 ?? $option['price']
                                 ?? ($optionPriceInt !== null ? ($formatPrice)($optionPriceInt) : null);
@@ -694,6 +696,7 @@
                                 $optionPriceDisplay = ($formatPrice)((int) $optionPriceDisplay);
                             }
                             $optionOriginalDisplay = $option['variant_original_price_display']
+                                ?? $option['base_price']
                                 ?? $option['variant_original_price']
                                 ?? $option['original_price']
                                 ?? ($optionOriginalInt !== null ? ($formatPrice)($optionOriginalInt) : null);
@@ -798,16 +801,25 @@
                                     $defaultInspiredTitle = $preselectedVariant['inspired_by_title'];
                                 }
 
-                                if ($preselectedVariant['variant_price'] !== null) {
+                                if (array_key_exists('variant_action_price', $preselectedVariant) && $preselectedVariant['variant_action_price'] !== null) {
+                                    $priceCurrentInt = $preselectedVariant['variant_action_price'];
+                                } elseif (array_key_exists('variant_action_price', $preselectedVariant) && $preselectedVariant['variant_action_price'] === null && array_key_exists('action_price', $preselectedVariant) && $preselectedVariant['action_price'] !== null) {
+                                    $priceCurrentInt = $preselectedVariant['action_price'];
+                                } elseif ($preselectedVariant['variant_price'] !== null) {
                                     $priceCurrentInt = $preselectedVariant['variant_price'];
                                 }
-                                if ($preselectedVariant['variant_original_price'] !== null) {
+                                if (array_key_exists('base_price', $preselectedVariant) && $preselectedVariant['base_price'] !== null) {
+                                    $priceOriginalInt = $preselectedVariant['base_price'];
+                                } elseif ($preselectedVariant['variant_original_price'] !== null) {
                                     $priceOriginalInt = $preselectedVariant['variant_original_price'];
                                 }
 
                                 $priceCurrentDisplay = $preselectedVariant['variant_price_display']
+                                    ?? $preselectedVariant['variant_action_price']
+                                    ?? $preselectedVariant['action_price']
                                     ?? ($priceCurrentInt !== null ? ($formatPrice)($priceCurrentInt) : null);
                                 $priceOriginalDisplay = $preselectedVariant['variant_original_price_display']
+                                    ?? $preselectedVariant['base_price']
                                     ?? ($priceOriginalInt !== null ? ($formatPrice)($priceOriginalInt) : null);
 
                                 if (isset($preselectedVariant['variant_discount_percentage']) && $preselectedVariant['variant_discount_percentage'] !== null) {
@@ -1018,8 +1030,7 @@
                                                 @endphp
                                                 @php
                                                     $variantPriceDisplay = $option['variant_price_display']
-                                                        ?? $option['variant_price']
-                                                        ?? $option['price']
+                                                        ?? ($option['variant_action_price'] ?? $option['action_price'] ?? $option['variant_price'] ?? $option['price'] ?? null)
                                                         ?? null;
                                                     if ($variantPriceDisplay === null && isset($option['price_value'])) {
                                                         $variantPriceDisplay = $formatPrice((int) $option['price_value']);
@@ -1028,10 +1039,16 @@
                                                     }
 
                                                     $variantOriginalPriceDisplay = $option['variant_original_price_display'] ?? null;
-                                                    if ($variantOriginalPriceDisplay === null && isset($option['variant_original_price'])) {
-                                                        $variantOriginalPriceDisplay = is_numeric($option['variant_original_price'])
-                                                            ? $formatPrice((int) $option['variant_original_price'])
-                                                            : (string) $option['variant_original_price'];
+                                                    if ($variantOriginalPriceDisplay === null) {
+                                                        if (isset($option['base_price'])) {
+                                                            $variantOriginalPriceDisplay = is_numeric($option['base_price'])
+                                                                ? $formatPrice((int) $option['base_price'])
+                                                                : (string) $option['base_price'];
+                                                        } elseif (isset($option['variant_original_price'])) {
+                                                            $variantOriginalPriceDisplay = is_numeric($option['variant_original_price'])
+                                                                ? $formatPrice((int) $option['variant_original_price'])
+                                                                : (string) $option['variant_original_price'];
+                                                        }
                                                     }
 
                                                     $variantImage = $option['variant_image'] ?? ($option['variant_mini_image'] ?? '');

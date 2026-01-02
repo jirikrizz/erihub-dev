@@ -1639,7 +1639,7 @@ export const ShoptetPluginGeneratorPage = () => {
       .page {
         background: #ffffff;
         border-radius: 16px;
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+        box-shadow: none;
         padding: 32px;
         max-width: 960px;
         margin: 0 auto;
@@ -1679,7 +1679,7 @@ export const ShoptetPluginGeneratorPage = () => {
         color: #ffffff;
         text-decoration: none;
         font-weight: 600;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        box-shadow: none;
       }
       .details {
         margin-top: 32px;

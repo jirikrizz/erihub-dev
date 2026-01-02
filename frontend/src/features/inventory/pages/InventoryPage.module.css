@@ -167,8 +167,11 @@
 
 .actionBar {
   display: flex;
-  flex-direction: column;
-  gap: var(--mantine-spacing-md);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+  margin-top: 6px;
 }
 
 .actionButtons {
@@ -177,12 +180,94 @@
   gap: var(--mantine-spacing-sm);
 }
 
-.selectionSummary {
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--mantine-spacing-sm);
+  margin-left: auto;
+}
+
+.selectedNotice {
+  margin-left: auto;
+}
+
+.toolbarPill {
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--app-surface-card);
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--mantine-spacing-sm);
+  flex-wrap: wrap;
+}
+
+.headerTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.countsRow {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(var(--mantine-spacing-sm) * 0.9);
-  color: var(--app-text-tertiary);
-  font-size: 0.82rem;
+  gap: 6px;
+  align-items: center;
+}
+
+.pageSizeControl {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.tableControls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.tableControlsRow {
+  display: flex;
+  gap: var(--mantine-spacing-sm);
+  align-items: center;
+}
+
+.truncate {
+  max-width: 100%;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineClamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.lineClamp1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.aiCell {
+  min-height: 40px;
 }
 
 .tableCard {
@@ -193,79 +278,6 @@
   display: flex;
   flex-direction: column;
   gap: calc(var(--mantine-spacing-lg) * 0.55);
-}
-
-.tableScroll {
-  border-radius: 18px;
-  border: 1px solid var(--app-border-subtle);
-  background: var(--app-surface-panel);
-  overflow: hidden;
-}
-
-.dataTable {
-  border-collapse: separate;
-  border-spacing: 0;
-  min-width: 1400px;
-  font-size: 0.92rem;
-}
-
-.dataTable thead th {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--app-text-tertiary);
-  background: var(--app-table-header-bg);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  border-bottom: 1px solid var(--app-border-strong);
-  padding-block: 12px;
-}
-
-.selectionHeader {
-  width: 38px;
-  min-width: 38px;
-  padding-inline: 10px;
-  background: var(--app-table-header-bg);
-}
-
-.selectionCell {
-  width: 38px;
-  min-width: 38px;
-  padding-inline: 10px;
-}
-
-.resizableHeader {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.headerButton {
-  display: inline-flex;
-  flex: 1 1 auto;
-  justify-content: space-between;
-  align-items: center;
-  text-align: left;
-  width: 100%;
-  padding: 0;
-  background: none;
-}
-
-.headerButton:focus-visible {
-  outline: 2px solid var(--mantine-color-blue-5);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-.resizeHandle {
-  position: relative;
-  flex: 0 0 10px;
-  align-self: stretch;
-  cursor: col-resize;
-  margin-right: -6px;
 }
 
 .resizeHandle::after {

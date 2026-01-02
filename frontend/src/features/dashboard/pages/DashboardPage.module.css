@@ -3,16 +3,11 @@
   padding: calc(var(--mantine-spacing-lg) * 0.9);
   background: var(--app-surface-card);
   border: 1px solid var(--app-border-subtle);
-  transition: background 160ms ease, border-color 160ms ease;
 }
 
 [data-theme='dark'] .metricCard {
   background: var(--app-surface-card);
   border: 1px solid var(--app-border-subtle);
-}
-
-.metricCard:hover {
-  border-color: var(--app-border-strong);
 }
 
 .metricLabel {

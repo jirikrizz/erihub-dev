@@ -16,6 +16,7 @@ use Modules\Orders\Support\OrderStatusResolver;
 class RecalculateCustomerMetricsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Modules\Core\Traits\WithJobLocking;
 
     /** @var list<string> */
     private array $customerGuids;
@@ -24,10 +25,18 @@ class RecalculateCustomerMetricsJob implements ShouldQueue
     {
         $this->customerGuids = array_values(array_filter($customerGuids, fn ($value) => $value !== null && $value !== ''));
         $this->queue = 'customers_metrics';
+        $this->jobLockTimeout = 3600; // 1 hour lock
     }
 
     public function handle(OrderStatusResolver $orderStatusResolver): void
     {
+        // Acquire job lock to prevent concurrent execution
+        if (!$this->acquireLock()) {
+            \Illuminate\Support\Facades\Log::info('RecalculateCustomerMetricsJob is already running for these customers, skipping');
+            return;
+        }
+
+        try {
         if ($this->customerGuids === []) {
             return;
         }

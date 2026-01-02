@@ -95,6 +95,21 @@
   }
 
   container = renderWidget(container, html, token);
+
+  // If renderer returned no HTML or there are no product elements, hide the container
+  try {
+    var hasProducts = container && (container.querySelector && (container.querySelector('.product') || container.querySelector('.kv-widget-track')));
+    if (!html || !hasProducts) {
+      if (container && container.style) {
+        container.style.display = 'none';
+      }
+      if (container && container.setAttribute) {
+        container.setAttribute('data-kv-widget', 'empty');
+      }
+      return;
+    }
+  } catch (error) {}
+
   container.setAttribute('data-kv-widget-loaded', '1');
 
   var sliderTarget = container.querySelector ? container.querySelector('.kv-widget-slider') : null;

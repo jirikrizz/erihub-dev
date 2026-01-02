@@ -7,6 +7,7 @@ use Modules\Shoptet\Http\Controllers\ProductSyncController;
 use Modules\Shoptet\Http\Controllers\SnapshotController;
 use Modules\Shoptet\Http\Controllers\SnapshotExecutionController;
 use Modules\Shoptet\Http\Controllers\WebhookJobController;
+use Modules\Shoptet\Http\Controllers\FailedSnapshotController;
 
 Route::get('shops', [ShopController::class, 'index']);
 Route::post('shops', [ShopController::class, 'store']);
@@ -28,3 +29,9 @@ Route::post('shops/{shop}/sync/orders', [OrderSyncController::class, 'import']);
 Route::post('shops/{shop}/snapshots/products', [SnapshotController::class, 'products']);
 Route::post('shops/{shop}/snapshots/orders', [SnapshotController::class, 'orders']);
 Route::post('shops/{shop}/snapshots/customers', [SnapshotController::class, 'customers']);
+
+// Failed snapshots management
+Route::get('shops/{shop}/snapshots/failed', [FailedSnapshotController::class, 'index']);
+Route::get('shops/{shop}/snapshots/failed/{failedSnapshot}', [FailedSnapshotController::class, 'show']);
+Route::post('shops/{shop}/snapshots/failed/{failedSnapshot}/retry', [FailedSnapshotController::class, 'retry']);
+Route::delete('shops/{shop}/snapshots/failed/{failedSnapshot}', [FailedSnapshotController::class, 'destroy']);

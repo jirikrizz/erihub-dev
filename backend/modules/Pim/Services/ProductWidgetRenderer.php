@@ -49,10 +49,12 @@ class ProductWidgetRenderer
                 'inspired_by_brand' => $this->normalizeString($payload['inspired_by_brand'] ?? null),
                 'inspired_by_title' => $this->normalizeString($payload['inspired_by_title'] ?? null),
                 'price' => [
-                    'current' => $pricePayload['current'] ?? $payload['price_current'] ?? null,
-                    'original' => $pricePayload['original'] ?? $payload['price_original'] ?? null,
-                    'volume' => $pricePayload['volume'] ?? $payload['price_volume'] ?? null,
-                    'discount' => $pricePayload['discount'] ?? $payload['price_discount'] ?? null,
+                  'current' => $pricePayload['current'] ?? $payload['price_current'] ?? null,
+                  'original' => $pricePayload['original'] ?? $payload['price_original'] ?? null,
+                  'volume' => $pricePayload['volume'] ?? $payload['price_volume'] ?? null,
+                  'discount' => $pricePayload['discount'] ?? $payload['price_discount'] ?? null,
+                  'action_price' => $pricePayload['action_price'] ?? $payload['price']['action_price'] ?? $payload['price_action'] ?? $payload['action_price'] ?? null,
+                  'base_price' => $pricePayload['base_price'] ?? $payload['price']['base_price'] ?? $payload['price_base'] ?? $payload['base_price'] ?? null,
                 ],
                 'buy_button' => [
                     'label' => $this->normalizeString($payload['buy_button']['label'] ?? $payload['buy_label'] ?? 'Do košíku'),
@@ -74,12 +76,23 @@ class ProductWidgetRenderer
 
         $containerId = Arr::get($settings, 'container_id');
         if (! is_string($containerId) || $containerId === '') {
-            $containerId = 'kv-widget-'.Str::lower($widget->public_token);
+          $containerId = 'kv-widget-'.Str::lower($widget->public_token);
         }
 
         $containerClass = Arr::get($settings, 'container_class');
         if (! is_string($containerClass) || $containerClass === '') {
-            $containerClass = 'products products-block kv-widget-block';
+          $containerClass = 'products products-block kv-widget-block';
+        }
+        // If there are no items, render nothing (avoid empty "Související produkty" widget)
+        if ($items->isEmpty()) {
+          return [
+            'html' => '',
+            'styles' => '',
+            'settings' => array_merge($settings, [
+              'container_id' => $containerId,
+              'container_class' => $containerClass,
+            ]),
+          ];
         }
         $additionalClasses = 'homepage-products-1 parfemy';
         $containerClass = implode(
@@ -206,17 +219,18 @@ class ProductWidgetRenderer
                 'variant_stock_level' => $option['variant_stock_level'] ?? null,
                 'variant_url' => $variantUrl,
                 'variant_detail_url' => $variantDetailUrl,
-                'variant_price' => $option['variant_price'] ?? $option['price'] ?? null,
-                'variant_original_price' => $option['variant_original_price'] ?? $option['original_price'] ?? null,
-                'variant_price_display' => $this->normalizeString(
-                    $option['variant_price_display'] ?? $option['price_display'] ?? $option['price'] ?? null
-                ),
-                'variant_original_price_display' => $this->normalizeString(
-                    $option['variant_original_price_display']
-                        ?? $option['original_price_display']
-                        ?? $option['original_price']
-                        ?? null
-                ),
+              'variant_price' => $option['variant_price'] ?? $option['price'] ?? null,
+              'variant_original_price' => $option['variant_original_price'] ?? $option['original_price'] ?? null,
+              'variant_action_price' => $option['variant_action_price'] ?? $option['action_price'] ?? null,
+              'variant_price_display' => $this->normalizeString(
+                $option['variant_price_display'] ?? $option['price_display'] ?? $option['price'] ?? null
+              ),
+              'variant_original_price_display' => $this->normalizeString(
+                $option['variant_original_price_display']
+                  ?? $option['original_price_display']
+                  ?? $option['original_price']
+                  ?? null
+              ),
                 'variant_discount_value' => $option['variant_discount_value'] ?? $option['discount_value'] ?? null,
                 'variant_discount_percentage' => $option['variant_discount_percentage'] ?? null,
                 'price_value' => $option['price_value'] ?? null,

@@ -170,7 +170,7 @@ section {
   min-height: 260px;
   border-radius: 28px;
   background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06));
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+  box-shadow: none;
 }
 
 .microshop-product-grid {
@@ -184,15 +184,15 @@ section {
   background: #fff;
   border-radius: 28px;
   padding: 1.9rem;
-  box-shadow: 0 30px 60px rgba(16, 19, 31, 0.12);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s ease;
 }
 .microshop-product-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 40px 80px rgba(16, 19, 31, 0.16);
+  box-shadow: none;
 }
 .microshop-product-image-placeholder,
 .microshop-product-card img {
@@ -267,7 +267,7 @@ section {
   border-radius: 32px;
   background: #fff;
   padding: 3rem;
-  box-shadow: 0 30px 60px rgba(16,19,31,0.08);
+  box-shadow: none;
   display: grid;
   gap: 2.5rem;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
