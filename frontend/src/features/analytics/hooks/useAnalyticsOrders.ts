@@ -10,6 +10,7 @@ export const useAnalyticsOrders = (params?: AnalyticsOrdersParams, options: Opti
   useQuery<AnalyticsOrders>({
     queryKey: ['analytics', 'orders', params ?? {}],
     queryFn: () => fetchAnalyticsOrders(params ?? {}),
+    staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
     enabled: (options.enabled ?? true) && params !== undefined,
   });
