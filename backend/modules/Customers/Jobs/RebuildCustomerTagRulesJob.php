@@ -13,6 +13,7 @@ use Modules\Customers\Services\CustomerTagRuleEngine;
 class RebuildCustomerTagRulesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Modules\Core\Traits\WithJobLocking;
 
     public function __construct()
     {
@@ -21,6 +22,13 @@ class RebuildCustomerTagRulesJob implements ShouldQueue
 
     public function handle(CustomerTagRuleEngine $ruleEngine): void
     {
+        // Acquire job lock to prevent concurrent execution
+        if (!$this->acquireLock()) {
+            \Illuminate\Support\Facades\Log::info('RebuildCustomerTagRulesJob is already running, skipping');
+            return;
+        }
+
+        try {
         Customer::query()
             ->with(['metrics', 'shop:id,provider'])
             ->orderBy('created_at')
@@ -32,5 +40,8 @@ class RebuildCustomerTagRulesJob implements ShouldQueue
                     );
                 }
             });
+        } finally {
+            $this->releaseLock();
+        }
     }
 }

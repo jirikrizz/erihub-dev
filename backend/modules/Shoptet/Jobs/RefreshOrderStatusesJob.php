@@ -11,6 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Modules\Core\Models\JobSchedule;
+use Modules\Customers\Services\CustomerMetricsDispatchService;
 use Modules\Orders\Services\OrderSyncService;
 use Modules\Shoptet\Models\Shop;
 use Modules\Shoptet\Services\SnapshotPipelineService;
@@ -18,6 +19,7 @@ use Modules\Shoptet\Services\SnapshotPipelineService;
 class RefreshOrderStatusesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Modules\Core\Traits\WithJobLocking;
 
     public function __construct(private readonly string $scheduleId)
     {
@@ -26,8 +28,16 @@ class RefreshOrderStatusesJob implements ShouldQueue
 
     public function handle(
         OrderSyncService $orders,
-        SnapshotPipelineService $pipelines
+        SnapshotPipelineService $pipelines,
+        CustomerMetricsDispatchService $customerMetrics
     ): void {
+        // Acquire job lock to prevent concurrent execution
+        if (!$this->acquireLock()) {
+            \Illuminate\Support\Facades\Log::info('RefreshOrderStatusesJob is already running, skipping');
+            return;
+        }
+
+        try {
         /** @var JobSchedule|null $schedule */
         $schedule = JobSchedule::query()->with('shop')->find($this->scheduleId);
 
@@ -100,6 +110,16 @@ class RefreshOrderStatusesJob implements ShouldQueue
                     ? sprintf('Stavy objednávek aktualizovány pro %d shop(ů).', $processedShops)
                     : 'Žádný shop nebyl synchronizován (lock aktivní).',
             ])->save();
+
+            // Kick off background recalculation of customer metrics so dashboards stay consistent with refreshed orders.
+            try {
+                $customerMetrics->dispatch(queue: 'customers_metrics', chunkSize: 500);
+            } catch (\Throwable $throwable) {
+                Log::warning('Customer metrics dispatch after status refresh failed', [
+                    'schedule_id' => $this->scheduleId,
+                    'exception' => $throwable->getMessage(),
+                ]);
+            }
         } catch (\Throwable $throwable) {
             $schedule->forceFill([
                 'last_run_status' => 'failed',
@@ -113,6 +133,9 @@ class RefreshOrderStatusesJob implements ShouldQueue
             ]);
 
             throw $throwable;
+        }
+        } finally {
+            $this->releaseLock();
         }
     }
 

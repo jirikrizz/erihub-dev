@@ -18,6 +18,7 @@ class DispatchCustomerMetricsRecalculationJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use \Modules\Core\Traits\WithJobLocking;
 
     public function __construct(private readonly string $scheduleId)
     {
@@ -26,6 +27,13 @@ class DispatchCustomerMetricsRecalculationJob implements ShouldQueue
 
     public function handle(CustomerMetricsDispatchService $dispatcher): void
     {
+        // Acquire job lock to prevent concurrent execution
+        if (!$this->acquireLock()) {
+            \Illuminate\Support\Facades\Log::info('DispatchCustomerMetricsRecalculationJob is already running, skipping');
+            return;
+        }
+
+        try {
         /** @var JobSchedule|null $schedule */
         $schedule = JobSchedule::query()->find($this->scheduleId);
 
@@ -65,6 +73,9 @@ class DispatchCustomerMetricsRecalculationJob implements ShouldQueue
             ]);
 
             throw $throwable;
+        }
+        } finally {
+            $this->releaseLock();
         }
     }
 
