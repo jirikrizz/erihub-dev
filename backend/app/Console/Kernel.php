@@ -14,6 +14,15 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Database backup - daily at 2:00 AM UTC
+        $schedule->command('db:backup --retention=30')
+            ->dailyAt('02:00')
+            ->name('backup-database')
+            ->withoutOverlapping(60)
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('Database backup failed');
+            });
     }
 
     protected function commands(): void
