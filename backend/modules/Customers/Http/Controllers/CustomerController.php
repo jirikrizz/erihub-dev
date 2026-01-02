@@ -90,33 +90,24 @@ class CustomerController extends Controller
                 'Objednávky (JSON)',
             ]);
 
-            $baseQuery->chunkById(500, function ($chunk) use ($handle, $shopId) {
-                $customerIds = $chunk->pluck('id');
-                if ($customerIds->isEmpty()) {
-                    return;
-                }
-
-                $customers = Customer::query()
-                    ->whereIn('id', $customerIds)
-                    ->with(['orders' => function ($query) use ($shopId) {
-                        $query
-                            ->select([
-                                'id',
-                                'code',
-                                'ordered_at',
-                                'customer_guid',
-                                'shop_id',
-                                'status',
-                                'total_with_vat',
-                                'currency_code',
-                            ])
-                            ->where('shop_id', $shopId)
-                            ->orderBy('ordered_at');
-                    }])
-                    ->orderBy('id')
-                    ->get();
-
-                foreach ($customers as $customer) {
+            $baseQuery
+                ->with(['orders' => function ($query) use ($shopId) {
+                    $query
+                        ->select([
+                            'id',
+                            'code',
+                            'ordered_at',
+                            'customer_guid',
+                            'shop_id',
+                            'status',
+                            'total_with_vat',
+                            'currency_code',
+                        ])
+                        ->where('shop_id', $shopId)
+                        ->orderBy('ordered_at');
+                }])
+                ->chunkById(500, function ($chunk) use ($handle, $shopId) {
+                foreach ($chunk as $customer) {
                     $this->appendCustomerPresentation($customer);
                     [$firstName, $lastName] = $this->splitName($customer);
                     $addressFields = $this->extractAddressFields($customer);

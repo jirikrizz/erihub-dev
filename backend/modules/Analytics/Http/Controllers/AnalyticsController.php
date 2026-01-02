@@ -65,29 +65,34 @@ class AnalyticsController extends Controller
         $ordersQuery = (clone $baseOrdersQuery);
         $this->applyCompletedOrderFilter($ordersQuery);
 
-        $ordersTotal = (clone $ordersQuery)->count();
-        $ordersWithTotal = (clone $ordersQuery)->whereNotNull('total_with_vat');
+        // Single optimized query with all aggregations
+        $ordersStats = $ordersQuery
+            ->selectRaw('
+                COUNT(*) as orders_total,
+                SUM(CASE WHEN total_with_vat IS NOT NULL THEN 1 ELSE 0 END) as orders_with_total,
+                SUM(CASE WHEN total_with_vat IS NOT NULL THEN total_with_vat ELSE 0 END) as orders_total_value,
+                SUM(CASE WHEN total_with_vat IS NOT NULL THEN total_with_vat_base ELSE 0 END) as orders_total_value_base
+            ')
+            ->first();
 
-        $perCurrencyTotals = (clone $ordersWithTotal)
+        $ordersTotal = (int) ($ordersStats->orders_total ?? 0);
+        $ordersTotalValue = (float) ($ordersStats->orders_total_value_base ?? 0.0);
+        $ordersAverageValue = $ordersTotal > 0 ? $ordersTotalValue / $ordersTotal : 0.0;
+
+        $perCurrencyTotals = (clone $ordersQuery)
+            ->whereNotNull('total_with_vat')
             ->selectRaw('currency_code, COUNT(*) as orders_count, SUM(total_with_vat) as total_amount, SUM(total_with_vat_base) as total_amount_base')
             ->groupBy('currency_code')
             ->get();
 
         $ordersValueByCurrency = [];
-        $totalOrdersCount = 0;
-        $ordersTotalValue = 0.0;
-
         foreach ($perCurrencyTotals as $row) {
             $currency = $row->currency_code ?? $this->currencyConverter->getBaseCurrency();
             $ordersCount = (int) ($row->orders_count ?? 0);
-            $totalOrdersCount += $ordersCount;
-
             $totalAmount = (float) ($row->total_amount ?? 0.0);
             $baseAmount = $row->total_amount_base !== null
                 ? (float) $row->total_amount_base
                 : ($this->currencyConverter->convertToBase($totalAmount, $currency) ?? 0.0);
-
-            $ordersTotalValue += $baseAmount;
 
             $ordersValueByCurrency[] = [
                 'currency' => $currency,
@@ -96,8 +101,6 @@ class AnalyticsController extends Controller
                 'total_amount_base' => $baseAmount,
             ];
         }
-
-        $ordersAverageValue = $totalOrdersCount > 0 ? $ordersTotalValue / $totalOrdersCount : 0.0;
 
         $customerMetrics = $this->buildCustomerMetrics(
             baseOrdersQuery: clone $baseOrdersQuery,
