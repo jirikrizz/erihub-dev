@@ -30,9 +30,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register public widget routes that need NO middleware at all
-        $this->registerPublicWidgetRoutes();
-        
         if (env('APP_PREVIEW_READONLY', false)) {
             // Override Sanctum guard to avoid DB writes (last_used_at updates) in read-only preview.
             Auth::resolved(function ($auth) {
@@ -50,23 +47,6 @@ class AppServiceProvider extends ServiceProvider
                 });
             });
         }
-    }
-
-    private function registerPublicWidgetRoutes(): void
-    {
-        // These routes MUST be registered at the ROOT level with NO middleware
-        \Illuminate\Support\Facades\Route::middleware([])
-            ->name('api.')
-            ->group(function () {
-                \Illuminate\Support\Facades\Route::get(
-                    '/api/widgets/inventory/recommendations.js',
-                    [\Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController::class, 'script']
-                );
-                \Illuminate\Support\Facades\Route::get(
-                    '/api/inventory/recommendations/products',
-                    [\Modules\Inventory\Http\Controllers\PublicRecommendationsController::class, 'products']
-                );
-            });
     }
 
     private function registerIfAvailable(string $provider): void
