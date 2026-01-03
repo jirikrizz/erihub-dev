@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => null);
 
+        // Trust reverse proxy headers (Caddy/Nginx)
+        $middleware->trustProxies(
+            at: ['*'],
+            headers: \Illuminate\Http\Middleware\TrustProxies::HEADERS_X_FORWARDED_ALL
+        );
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
