@@ -25,7 +25,18 @@ class RecalculateCustomerMetricsJob implements ShouldQueue
     {
         $this->customerGuids = array_values(array_filter($customerGuids, fn ($value) => $value !== null && $value !== ''));
         $this->queue = 'customers_metrics';
-        $this->jobLockTimeout = 3600; // 1 hour lock
+        $this->jobLockTimeout = 300; // 5 minutes lock (reduced from 1 hour)
+    }
+
+    /**
+     * Override lock key to use per-customer-batch locking instead of global job locking.
+     * This allows multiple batches to process concurrently for different customers.
+     */
+    protected function getLockKey(): string
+    {
+        $class = class_basename(static::class);
+        $customerKey = md5(implode(',', $this->customerGuids));
+        return "job-lock:{$class}:{$customerKey}";
     }
 
     public function handle(OrderStatusResolver $orderStatusResolver): void

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Modules\Customers\Jobs\RecalculateCustomerMetricsJob;
 use Modules\Customers\Services\OrderCustomerBackfillService;
 use Modules\Orders\Models\Order;
 
@@ -42,6 +43,21 @@ class BackfillOrdersChunkJob implements ShouldQueue
             return;
         }
 
+        // Process orders and get affected customer GUIDs
         $service->process($orders, false);
+
+        // Collect unique customer GUIDs from processed orders
+        $customerGuids = $orders
+            ->pluck('customer_guid')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        // Dispatch metrics recalculation for affected customers
+        if ($customerGuids !== []) {
+            RecalculateCustomerMetricsJob::dispatch($customerGuids)
+                ->onQueue('customers_metrics');
+        }
     }
 }

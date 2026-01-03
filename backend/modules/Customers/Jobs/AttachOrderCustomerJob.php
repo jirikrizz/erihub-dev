@@ -33,7 +33,8 @@ class AttachOrderCustomerJob implements ShouldQueue
         $order->refresh();
 
         if ($order->customer_guid) {
-            RecalculateCustomerMetricsJob::dispatchSync([$order->customer_guid]);
+            RecalculateCustomerMetricsJob::dispatch([$order->customer_guid])
+                ->onQueue('customers_metrics');
         }
     }
 }
