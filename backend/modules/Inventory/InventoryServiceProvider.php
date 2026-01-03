@@ -13,6 +13,8 @@ class InventoryServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        \Illuminate\Support\Facades\Log::debug('Inventory module registering...!');
+        
         $this->app->singleton(ElogistClient::class, function ($app) {
             /** @var SettingsService $settings */
             $settings = $app->make(SettingsService::class);
