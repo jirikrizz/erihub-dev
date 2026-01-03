@@ -11,10 +11,14 @@ class RouteServiceProvider extends ServiceProvider
     {
         Route::prefix('api/inventory')
             ->middleware(['api', 'auth:sanctum', 'permission:section.inventory'])
-            ->group(__DIR__.'/routes/api.php');
+            ->group(function () {
+                $this->loadRoutesFromFile(__DIR__.'/routes/api.php');
+            });
 
         Route::prefix('api')
             ->middleware('api')
-            ->group(__DIR__.'/routes/public.php');
+            ->group(function () {
+                $this->loadRoutesFromFile(__DIR__.'/routes/public.php');
+            });
     }
 }
