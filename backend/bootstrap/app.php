@@ -28,10 +28,4 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return redirect()->guest('/');
         });
-    })
-    ->boot(function () {
-        // Register public API routes WITHOUT any middleware
-        // This ensures they're never caught by auth redirects
-        $this->loadRoutesFrom(__DIR__.'/../routes/public-api.php');
-    })
-    ->create();
+    })->create();
