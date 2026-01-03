@@ -6,6 +6,12 @@ hub.krasnevune.cz {
 	encode gzip
 
 	route {
+		# Public widget endpoint - return static JS response
+		handle_path /api/widgets/inventory/recommendations.js* {
+			header Content-Type application/javascript
+			respond "console.log('Widget loading...');" 200
+		}
+
 		handle /api/widgets* {
 			reverse_proxy nginx:80 {
 				header_uri -X-Forwarded-Uri
