@@ -7,5 +7,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Public widget endpoints
-Route::get('/api/widgets/inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
+// Test route
+Route::get('/test-global', function () {
+    return "Global test works!";
+});
+
