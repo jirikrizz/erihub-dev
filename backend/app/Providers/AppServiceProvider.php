@@ -54,10 +54,13 @@ class AppServiceProvider extends ServiceProvider
 
     private function registerPublicApiRoutes(): void
     {
-        \Illuminate\Support\Facades\Route::get('/api/widgets/inventory/recommendations.js', 
-            \Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController::class.'@script');
-        \Illuminate\Support\Facades\Route::get('/api/inventory/recommendations/products', 
-            \Modules\Inventory\Http\Controllers\PublicRecommendationsController::class.'@products');
+        // Register public API routes with ZERO middleware
+        \Illuminate\Support\Facades\Route::withoutMiddleware('*')->group(function () {
+            \Illuminate\Support\Facades\Route::get('/api/widgets/inventory/recommendations.js', 
+                \Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController::class.'@script');
+            \Illuminate\Support\Facades\Route::get('/api/inventory/recommendations/products', 
+                \Modules\Inventory\Http\Controllers\PublicRecommendationsController::class.'@products');
+        });
     }
 
     private function registerIfAvailable(string $provider): void
