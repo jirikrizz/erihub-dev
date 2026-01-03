@@ -2,28 +2,42 @@
 // Public widget endpoint - served directly by Nginx
 // This file is served as a PHP script directly without going through Laravel routing
 
-// Load Composer autoloader
-require __DIR__ . '/../../../../vendor/autoload.php';
+header('Content-Type: application/javascript; charset=utf-8');
 
-// Create a minimal Illuminate app just to load the controller
-require __DIR__ . '/../../../../bootstrap/app.php';
-
-// Capture the request
-$request = \Illuminate\Http\Request::capture();
-
-// Call the controller method directly through the app container
-$controller = app(\Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController::class);
-
-try {
-    // Set proper content type for JavaScript
-    header('Content-Type: application/javascript; charset=utf-8');
+// For now, return a simple script that will work through the normal Laravel route
+// The actual data will be fetched from the protected /api/inventory/recommendations/products endpoint
+?>
+(function() {
+    const productId = new URLSearchParams(window.location.search).get('product_id');
+    const limit = new URLSearchParams(window.location.search).get('limit') || 8;
+    const containerId = new URLSearchParams(window.location.search).get('container') || 'reco-product';
     
-    // Call the controller method
-    $response = $controller->script($request);
+    if (!productId) {
+        console.warn('Widget: product_id parameter missing');
+        return;
+    }
     
-    // Send response
-    $response->header('Content-Type', 'application/javascript')->send();
-} catch (\Exception $e) {
-    header('Content-Type: application/javascript; charset=utf-8', true, 500);
-    echo 'console.error("Widget error: ' . addslashes($e->getMessage()) . '");';
-}
+    // Fetch recommendations from the protected API endpoint
+    const url = `/api/inventory/recommendations/products?product_id=${productId}&limit=${limit}`;
+    
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.products || data.products.length === 0) {
+                console.log('No recommendations found');
+                return;
+            }
+            
+            // Insert widget HTML
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const html = data.products
+                .slice(0, limit)
+                .map(p => `<div class="reco-item"><a href="${p.url}">${p.name}</a></div>`)
+                .join('');
+                
+            container.innerHTML = `<div class="reco-products">${html}</div>`;
+        })
+        .catch(err => console.error('Widget error:', err));
+})();
