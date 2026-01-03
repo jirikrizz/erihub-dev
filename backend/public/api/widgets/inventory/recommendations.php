@@ -21,18 +21,26 @@ header('Content-Type: application/javascript; charset=utf-8');
     const url = `/api/inventory/recommendations/products?product_id=${productId}&limit=${limit}`;
     
     fetch(url)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`API error: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
-            if (!data.products || data.products.length === 0) {
-                console.log('No recommendations found');
+            if (!data.recommendations || data.recommendations.length === 0) {
+                console.warn('Widget: No recommendations found for product');
                 return;
             }
             
             // Insert widget HTML
-            const container = document.getElementById(containerId);
-            if (!container) return;
+            const container = document.getElementById(containerId) || document.querySelector(`.${containerId}`);
+            if (!container) {
+                console.warn(`Widget: container "${containerId}" not found (tried ID and class)`);
+                return;
+            }
             
-            const html = data.products
+            const html = data.recommendations
                 .slice(0, limit)
                 .map(p => `<div class="reco-item"><a href="${p.url}">${p.name}</a></div>`)
                 .join('');
