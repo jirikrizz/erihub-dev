@@ -11,11 +11,8 @@ require __DIR__ . '/../../../../bootstrap/app.php';
 // Capture the request
 $request = \Illuminate\Http\Request::capture();
 
-// Disable all middleware and services
-$kernel = app(\Illuminate\Contracts\Http\Kernel::class);
-
-// Call the controller method directly
-$controller = new \Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController();
+// Call the controller method directly through the app container
+$controller = app(\Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController::class);
 
 try {
     // Set proper content type for JavaScript
