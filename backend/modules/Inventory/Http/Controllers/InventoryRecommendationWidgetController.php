@@ -155,10 +155,11 @@ class InventoryRecommendationWidgetController extends Controller
         $startedAt = microtime(true);
         $timeBudgetSeconds = 8.0;
         $data = $request->validate([
-            'widget_id' => ['required', 'uuid', 'exists:product_widgets,id'],
+            'widget_id' => ['nullable', 'uuid', 'exists:product_widgets,id'],
+            'product_id' => ['nullable', 'string', 'max:120'],
+            'product_code' => ['nullable', 'string', 'max:120'],
             'variant_code' => ['nullable', 'string', 'max:120'],
             'variant_id' => ['nullable', 'string', 'max:120'],
-            'product_code' => ['nullable', 'string', 'max:120'],
             'page_type' => ['nullable', 'string', 'max:120'],
             'language' => ['nullable', 'string', 'max:32'],
             'currency' => ['nullable', 'string', 'max:32'],
@@ -169,15 +170,30 @@ class InventoryRecommendationWidgetController extends Controller
 
         $variantCode = Arr::get($data, 'variant_code');
         $variantId = Arr::get($data, 'variant_id');
-        $productCode = Arr::get($data, 'product_code');
+        $productCode = Arr::get($data, 'product_code') ?? Arr::get($data, 'product_id');
 
         if ($variantCode === null && $variantId === null && $productCode === null) {
             return $this->emptyScriptResponse();
         }
 
-        $template = ProductWidget::query()
-            ->with('items')
-            ->findOrFail($data['widget_id']);
+        // Use provided widget_id or get the default "Auto Widget" one
+        $widgetId = Arr::get($data, 'widget_id');
+        if ($widgetId) {
+            $template = ProductWidget::query()
+                ->with('items')
+                ->findOrFail($widgetId);
+        } else {
+            // Use the default auto-widget created by plugin
+            $template = ProductWidget::query()
+                ->with('items')
+                ->where('name', 'Auto Widget')
+                ->orWhere('is_default', true)
+                ->first();
+                
+            if (!$template) {
+                return $this->emptyScriptResponse();
+            }
+        }
 
         $variant = null;
         $query = ProductVariant::query()->with('product');
