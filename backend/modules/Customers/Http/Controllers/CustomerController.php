@@ -257,8 +257,9 @@ class CustomerController extends Controller
         $payload['base_currency'] = $this->currencyConverter->getBaseCurrency();
 
         if ($request->boolean('include_filters')) {
+            $includeCountries = $request->boolean('include_countries', false);
             $payload['filters'] = [
-                'countries' => $this->availableCountries($filtersBaseQuery),
+                'countries' => $includeCountries ? $this->availableCountries($filtersBaseQuery) : [],
                 'tags' => $this->tagFilterOptions(),
             ];
         }
