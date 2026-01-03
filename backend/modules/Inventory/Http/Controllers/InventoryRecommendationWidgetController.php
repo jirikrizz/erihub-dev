@@ -152,6 +152,12 @@ class InventoryRecommendationWidgetController extends Controller
 
     public function script(Request $request)
     {
+        \Log::warning('Widget script called', [
+            'path' => $request->path(),
+            'url' => $request->url(),
+            'product_id' => $request->get('product_id'),
+        ]);
+        
         $startedAt = microtime(true);
         $timeBudgetSeconds = 8.0;
         $data = $request->validate([
