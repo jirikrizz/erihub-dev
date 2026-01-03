@@ -1,3 +1,38 @@
-use Illuminate\Http\Request;
-use Modules\Shoptet\Http\Controllers\PluginAdminController;
- = app(PluginAdminController::class);
+$shop = \Modules\Shoptet\Models\Shop::first();
+if (!$shop) {
+    echo "✗ Žádný shop nenalezen\n";
+    exit;
+}
+$plugin = \Modules\Shoptet\Models\ShoptetPlugin::find(74);
+if (!$plugin) {
+    echo "✗ Plugin ID 74 nenalezen\n";
+    exit;
+}
+$v9 = \Modules\Shoptet\Models\ShoptetPluginVersion::where('plugin_id', 74)
+    ->where('version', 9)
+    ->first();
+if (!$v9) {
+    echo "✗ Verze 9 nenalezena\n";
+    exit;
+}
+echo "Nasazuji verzi 9 pluginu ID 74 na Shoptet...\n";
+echo "Shop: " . $shop->name . " (" . $shop->domain . ")\n";
+echo "Plugin: " . $plugin->name . "\n";
+echo "Verze: " . $v9->version . "\n";
+echo "Velikost kódu: " . strlen($v9->code) . " bytů\n";
+// Vytvoř Shoptet API klienta
+try {
+    $client = new \Modules\Shoptet\Services\ShoptetClient($shop);
+    // Příprav payload
+    $payload = [
+        'code' => $v9->code,
+        'name' => $plugin->name,
+    ];
+    // Vlož plugin na Shoptet
+    $response = $client->updatePlugin(74, $payload);
+    echo "\n✓ Verze 9 úspěšně nasazena na Shoptet!\n";
+    echo "Response: " . json_encode($response, JSON_PRETTY_PRINT) . "\n";
+} catch (\Exception $e) {
+    echo "\n✗ Chyba při nasazování:\n";
+    echo $e->getMessage() . "\n";
+}
