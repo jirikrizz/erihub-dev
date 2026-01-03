@@ -268,6 +268,7 @@ class CustomerController extends Controller
                 'email' => $customer['email'] ?? null,
                 'phone' => $customer['phone'] ?? null,
                 'shop_id' => $customer['shop_id'] ?? null,
+                'shop_name' => $customer['shop_name'] ?? null,
                 'customer_group' => $customer['customer_group'] ?? null,
                 'created_at_remote' => $customer['created_at_remote'] ?? null,
                 'data' => $customer['data'] ?? null,
@@ -548,6 +549,7 @@ class CustomerController extends Controller
                 'customers.customer_group',
                 'customers.created_at_remote',
                 'customers.data',
+                'shops.name as shop_name',
             ])
                 ->addSelect(DB::raw('COALESCE(metrics.orders_count, 0) AS orders_count'))
                 ->addSelect(DB::raw('COALESCE(metrics.total_spent, 0) AS total_spent'))
