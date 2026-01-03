@@ -17,8 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Public widget endpoints don't need any middleware
         $middleware->withoutMiddleware([
-            '/api/widgets/inventory/recommendations.js',
-            '/api/inventory/recommendations/products',
+            'widgets/inventory/recommendations.js',
+            'inventory/recommendations/products',
         ]);
 
         $middleware->alias([
