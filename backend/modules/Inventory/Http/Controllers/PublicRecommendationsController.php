@@ -44,8 +44,8 @@ class PublicRecommendationsController extends Controller
 
             // Find variant by ID (handles both UUID and integer Eloquent PKs)
             $variant = ProductVariant::query()
-                ->where('id', $variantIdParam)
-                ->orWhere('code', $variantIdParam)  // Also allow lookup by code
+                ->where('id', (string) $variantIdParam)
+                ->orWhere('code', (string) $variantIdParam)  // Also allow lookup by code
                 ->first();
 
             if (!$variant) {
