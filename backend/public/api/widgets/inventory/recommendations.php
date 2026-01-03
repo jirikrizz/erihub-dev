@@ -3,8 +3,7 @@
 // This file is served as a PHP script directly without going through Laravel routing
 
 // Create a minimal Illuminate app just to load the controller
-$basePath = dirname(__DIR__) . '/../..';
-require $basePath . '/bootstrap/app.php';
+require __DIR__ . '/../../../../bootstrap/app.php';
 
 // Capture the request
 $request = \Illuminate\Http\Request::capture();
