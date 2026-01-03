@@ -6,6 +6,10 @@ hub.krasnevune.cz {
 	encode gzip
 
 	route {
+		handle /api/widgets* {
+			reverse_proxy nginx:80
+		}
+
 		handle /api* {
 			reverse_proxy nginx:80
 		}
