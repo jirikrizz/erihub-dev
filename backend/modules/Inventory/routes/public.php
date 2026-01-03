@@ -8,7 +8,10 @@ Route::get('inventory/widgets/recommendations.js', [InventoryRecommendationWidge
 Route::get('widgets/inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
 
 // Public API endpoints for Shoptet plugin integration (already prefixed with /api by RouteServiceProvider)
+Route::prefix('widgets')->group(function () {
+    Route::get('inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
+});
+
 Route::prefix('inventory')->group(function () {
     Route::get('recommendations/products', [PublicRecommendationsController::class, 'products']);
-    Route::get('widgets/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
 });
