@@ -259,6 +259,37 @@ class CustomerController extends Controller
         $payload = $this->transformPaginator($customers, $total);
         $payload['base_currency'] = $this->currencyConverter->getBaseCurrency();
 
+        // Convert to array and explicitly filter fields to avoid loading shop relation
+        $payload['data'] = array_map(function ($customer) {
+            return [
+                'id' => $customer['id'] ?? null,
+                'guid' => $customer['guid'] ?? null,
+                'full_name' => $customer['full_name'] ?? null,
+                'email' => $customer['email'] ?? null,
+                'phone' => $customer['phone'] ?? null,
+                'shop_id' => $customer['shop_id'] ?? null,
+                'customer_group' => $customer['customer_group'] ?? null,
+                'created_at_remote' => $customer['created_at_remote'] ?? null,
+                'data' => $customer['data'] ?? null,
+                'orders_count' => $customer['orders_count'] ?? 0,
+                'total_spent' => $customer['total_spent'] ?? 0,
+                'total_spent_base' => $customer['total_spent_base'] ?? 0,
+                'average_order_value' => $customer['average_order_value'] ?? 0,
+                'average_order_value_base' => $customer['average_order_value_base'] ?? 0,
+                'first_order_at' => $customer['first_order_at'] ?? null,
+                'last_order_at' => $customer['last_order_at'] ?? null,
+                'problem_orders' => $customer['problem_orders'] ?? 0,
+                'completed_orders' => $customer['completed_orders'] ?? 0,
+                'shop_provider' => $customer['shop_provider'] ?? null,
+                'base_currency' => $customer['base_currency'] ?? null,
+                'order_providers' => $customer['order_providers'] ?? [],
+                'group_key' => $customer['group_key'] ?? null,
+                'group_label' => $customer['group_label'] ?? null,
+                'tags' => $customer['tags'] ?? [],
+                'tag_badges' => $customer['tag_badges'] ?? [],
+            ];
+        }, $payload['data'] ?? []);
+
         if ($request->boolean('include_filters')) {
             $includeCountries = $request->boolean('include_countries', false);
             $payload['filters'] = [
