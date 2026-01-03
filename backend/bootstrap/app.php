@@ -22,17 +22,16 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $exception, $request) {
-            \Log::error('AuthenticationException', [
-                'path' => $request->path(),
-                'is_api' => $request->is('api/*'),
-                'expects_json' => $request->expectsJson(),
-                'exception' => $exception->getMessage(),
-            ]);
-            
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['message' => $exception->getMessage()], 401);
             }
 
             return redirect()->guest('/');
         });
-    })->create();
+    })
+    ->boot(function () {
+        // Register public API routes WITHOUT any middleware
+        // This ensures they're never caught by auth redirects
+        $this->loadRoutesFrom(__DIR__.'/../routes/public-api.php');
+    })
+    ->create();
