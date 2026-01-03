@@ -13,7 +13,8 @@ class RouteServiceProvider extends ServiceProvider
             ->middleware(['api', 'auth:sanctum', 'permission:section.inventory'])
             ->group(__DIR__.'/routes/api.php');
 
-        Route::middleware('api')
+        Route::prefix('api')
+            ->middleware('api')
             ->group(__DIR__.'/routes/public.php');
     }
 }
