@@ -15,10 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => null);
 
         // Trust reverse proxy headers (Caddy/Nginx)
-        $middleware->trustProxies(
-            at: ['*'],
-            headers: \Illuminate\Http\Middleware\TrustProxies::HEADERS_X_FORWARDED_ALL
-        );
+        $middleware->trustProxies(at: ['*']);
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
