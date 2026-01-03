@@ -45,8 +45,17 @@ hub.krasnevune.cz {
 			reverse_proxy storefront:3000
 		}
 
-	handle {
-		reverse_proxy frontend:5173
-	}
+		handle /test* {
+			reverse_proxy nginx:80
+		}
+
+		handle /admin* {
+			reverse_proxy nginx:80
+		}
+
+		handle {
+			reverse_proxy frontend:5173
+		}
 	}
 }
+
