@@ -106,6 +106,7 @@ export type Customer = {
     currency_code?: string | null;
     provider?: string | null;
   } | null;
+  shop_name?: string | null;
   shop_provider?: string | null;
   group_key?: string | null;
   group_label?: string | null;

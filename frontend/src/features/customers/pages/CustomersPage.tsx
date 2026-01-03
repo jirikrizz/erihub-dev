@@ -265,7 +265,7 @@ const sanitizeSortDescriptors = (
 const customerSortAccessors: Record<SortColumn, (customer: Customer) => string | number | Date | null> = {
   name: (customer) => customer.full_name ?? '',
   email: (customer) => customer.email ?? '',
-  shop: (customer) => customer.shop?.name ?? '',
+  shop: (customer) => customer.shop?.name ?? customer.shop_name ?? '',
   orders: (customer) => customer.completed_orders ?? customer.orders_count ?? 0,
   total_spent: (customer) => customer.total_spent_base ?? customer.total_spent ?? 0,
   average_order_value: (customer) =>
@@ -1237,12 +1237,12 @@ export const CustomersPage = () => {
 
       if (shop.trim()) {
         const shopQuery = shop.trim().toLowerCase();
-        const shopName = customer.shop?.name?.toLowerCase() ?? '';
+        const shopName = customer.shop?.name ?? customer.shop_name ?? '';
         const shopDomain = customer.shop?.domain?.toLowerCase() ?? '';
         const shopProvider = customer.shop_provider?.toLowerCase() ?? '';
         const orderProviders = (customer.order_providers ?? []).map((entry) => (entry ?? '').toLowerCase());
         const matches =
-          shopName.includes(shopQuery) ||
+          shopName.toLowerCase().includes(shopQuery) ||
           shopDomain.includes(shopQuery) ||
           shopProvider.includes(shopQuery) ||
           orderProviders.some((provider) => provider.includes(shopQuery));
@@ -1477,6 +1477,7 @@ export const CustomersPage = () => {
     }, [customer]);
 
     const shop = customer.shop;
+    const shopName = shop?.name ?? customer.shop_name ?? null;
     const localeLabel = shop?.locale ? shop.locale.toUpperCase() : null;
 
     return (
@@ -1615,25 +1616,25 @@ export const CustomersPage = () => {
             className={tableClasses.cell}
             style={{ width: columnSizes.shop, minWidth: columnSizes.shop }}
           >
-            {shop ? (
+            {shop || shopName ? (
               <Stack gap={2}>
                 <Group gap={6} wrap="wrap">
                   <Text size="sm" fw={500} component="span">
-                    {shop.name}
+                    {shopName}
                   </Text>
                   <Group gap={4} wrap="wrap">
                     {providersToDisplay.map((provider) => (
                       <ShopProviderBadge key={provider} provider={provider} />
                     ))}
                   </Group>
-                  {shop.is_master && (
+                  {shop?.is_master && (
                     <Badge size="xs" color="teal">
                       Master
                     </Badge>
                   )}
                 </Group>
                 <Text size="xs" c="dimmed" component="span">
-                  {shop.domain}
+                  {shop?.domain}
                   {localeLabel ? ` · ${localeLabel}` : ''}
                 </Text>
               </Stack>
