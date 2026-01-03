@@ -11,23 +11,15 @@ class RouteServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        // Protected API routes for inventory
         Route::prefix('api/inventory')
             ->middleware(['api', 'auth:sanctum', 'permission:section.inventory'])
             ->group(__DIR__.'/routes/api.php');
 
-        Route::prefix('api')
-            ->middleware('api')
-            ->group(function () {
-                Route::get('test-widget', function() { 
-                    \Illuminate\Support\Facades\Log::debug('Test route accessed!');
-                    return "Widget route works!"; 
-                });
-                
-                Route::get('widgets/inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
-                
-                Route::prefix('inventory')->group(function () {
-                    Route::get('recommendations/products', [PublicRecommendationsController::class, 'products']);
-                });
-            });
+        // Public widget endpoint - NO AUTH MIDDLEWARE
+        Route::get('/api/widgets/inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
+        
+        // Public recommendations API - NO AUTH MIDDLEWARE
+        Route::get('/api/inventory/recommendations/products', [PublicRecommendationsController::class, 'products']);
     }
 }
