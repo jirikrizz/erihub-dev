@@ -10,8 +10,13 @@ use Modules\Core\Http\Controllers\JobScheduleController;
 use Modules\Core\Http\Controllers\NotificationController;
 use Modules\Core\Http\Controllers\SettingsController;
 use Modules\Core\Http\Controllers\UserPreferenceController;
+use Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController;
 
 Route::get('/health', fn () => ['status' => 'ok']);
+
+// Public widget endpoints
+Route::get('/widgets/inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
+
 
 Route::post('auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
