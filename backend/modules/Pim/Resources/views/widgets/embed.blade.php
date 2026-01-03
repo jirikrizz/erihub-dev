@@ -30,6 +30,31 @@
         return $numeric === '' ? null : (int) $numeric;
     };
 
+    $extractMoneyCents = static function ($value): ?int {
+        if ($value === null) {
+            return null;
+        }
+
+        // Normalize common thousand/decimal separators and remove currency symbols
+        if (is_numeric($value)) {
+            $numeric = (float) $value;
+        } else {
+            $clean = str_replace(["\xC2\xA0", ' '], '', (string) $value); // drop NBSP/space
+            $clean = str_replace(',', '.', $clean);
+            $clean = preg_replace('/[^0-9.\-]/', '', $clean);
+            if ($clean === null || $clean === '') {
+                return null;
+            }
+            $numeric = is_numeric($clean) ? (float) $clean : null;
+        }
+
+        if ($numeric === null) {
+            return null;
+        }
+
+        return (int) round($numeric * 100);
+    };
+
     $formatPrice = static function (?int $value, string $locale = 'cs'): ?string {
         return CurrencyMap::formatPrice($value, $locale);
     };
@@ -628,8 +653,8 @@
                             $matchReasons[] = 'Značka originálu: '.$defaultInspiredBrand;
                         }
 
-                        $priceCurrentInt = $extractInt($price['action_price'] ?? $price['current'] ?? null);
-                        $priceOriginalInt = $extractInt($price['base_price'] ?? $price['original'] ?? null);
+                        $priceCurrentInt = $extractMoneyCents($price['action_price'] ?? $price['current'] ?? null);
+                        $priceOriginalInt = $extractMoneyCents($price['base_price'] ?? $price['original'] ?? null);
                         $priceDiscountPercent = $extractInt($price['discount'] ?? null);
                         if ($priceDiscountPercent === null && $priceCurrentInt !== null && $priceOriginalInt !== null && $priceOriginalInt > 0) {
                             $priceDiscountPercent = (int) round(max(0, 100 - ($priceCurrentInt / $priceOriginalInt) * 100));
@@ -682,8 +707,8 @@
                             }
 
                             $optionVariantId = $option['variant_id'] ?? $option['id'] ?? null;
-                            $optionPriceInt = $extractInt($option['variant_action_price'] ?? $option['action_price'] ?? $option['variant_price'] ?? $option['price'] ?? null);
-                            $optionOriginalInt = $extractInt($option['base_price'] ?? $option['variant_original_price'] ?? $option['original_price'] ?? null);
+                            $optionPriceInt = $extractMoneyCents($option['variant_action_price'] ?? $option['action_price'] ?? $option['variant_price'] ?? $option['price'] ?? null);
+                            $optionOriginalInt = $extractMoneyCents($option['base_price'] ?? $option['variant_original_price'] ?? $option['original_price'] ?? null);
                             $optionDiscountPercent = $optionPriceInt !== null && $optionOriginalInt !== null && $optionOriginalInt > 0
                                 ? (int) round(max(0, 100 - ($optionPriceInt / $optionOriginalInt) * 100))
                                 : null;
@@ -701,7 +726,7 @@
                                 ?? $option['price']
                                 ?? ($optionPriceInt !== null ? ($formatPrice)($optionPriceInt, $locale) : null);
                             if ($optionPriceDisplay !== null && is_numeric($optionPriceDisplay)) {
-                                $optionPriceDisplay = ($formatPrice)((int) $optionPriceDisplay, $locale);
+                                $optionPriceDisplay = ($formatPrice)((int) round((float) $optionPriceDisplay * 100), $locale);
                             }
                             $optionOriginalDisplay = $option['variant_original_price_display']
                                 ?? $option['base_price']
@@ -709,7 +734,7 @@
                                 ?? $option['original_price']
                                 ?? ($optionOriginalInt !== null ? ($formatPrice)($optionOriginalInt, $locale) : null);
                             if ($optionOriginalDisplay !== null && is_numeric($optionOriginalDisplay)) {
-                                $optionOriginalDisplay = ($formatPrice)((int) $optionOriginalDisplay, $locale);
+                                $optionOriginalDisplay = ($formatPrice)((int) round((float) $optionOriginalDisplay * 100), $locale);
                             }
 
                             $optionBrand = $normalizeOptionalString($option['inspired_by_brand'] ?? null);
@@ -1075,7 +1100,7 @@
                                                     if (isset($option['variant_discount_percentage']) && $option['variant_discount_percentage'] !== null) {
                                                         $variantDiscountDisplay = sprintf('%d %%', (int) $option['variant_discount_percentage']);
                                                     } elseif (isset($option['variant_discount_value']) && $option['variant_discount_value'] !== null) {
-                                                        $variantDiscountDisplay = (string) $option['variant_discount_value'];
+                                                        $variantDiscountDisplay = $formatPrice((int) $option['variant_discount_value'], $locale) ?? (string) $option['variant_discount_value'];
                                                     }
 
                                                     $optionBrand = $normalizeOptionalString($option['inspired_by_brand'] ?? null);
