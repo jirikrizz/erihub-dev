@@ -230,7 +230,7 @@ class CustomerController extends Controller
 
             $customer->setAttribute('order_providers', $orderProviders);
 
-            $primaryProvider = $customer->getAttribute('shop_provider') ?? $customer->shop?->provider;
+            $primaryProvider = $customer->getAttribute('shop_provider');
 
             if (! $primaryProvider && $orderProviders !== []) {
                 $primaryProvider = $orderProviders[0];
