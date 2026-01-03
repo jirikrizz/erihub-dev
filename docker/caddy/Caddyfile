@@ -6,9 +6,17 @@ hub.krasnevune.cz {
 	encode gzip
 
 	route {
-		# Public widget endpoint - reverse proxy to Nginx/PHP
+		# Public widget endpoints
 		handle /api/widgets/inventory/recommendations.js* {
 			header Content-Type application/javascript
+			reverse_proxy nginx:80 {
+				header_up X-Forwarded-Proto https
+				header_up X-Forwarded-Host {http.request.host}
+				header_up X-Forwarded-For {http.request.remote}
+			}
+		}
+
+		handle /api/inventory/recommendations/products* {
 			reverse_proxy nginx:80 {
 				header_up X-Forwarded-Proto https
 				header_up X-Forwarded-Host {http.request.host}
