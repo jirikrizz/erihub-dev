@@ -2,6 +2,9 @@
 // Public widget endpoint - served directly by Nginx
 // This file is served as a PHP script directly without going through Laravel routing
 
+// Load Composer autoloader
+require __DIR__ . '/../../../../vendor/autoload.php';
+
 // Create a minimal Illuminate app just to load the controller
 require __DIR__ . '/../../../../bootstrap/app.php';
 
