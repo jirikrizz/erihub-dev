@@ -4,8 +4,14 @@ use Illuminate\Support\Facades\Route;
 use Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController;
 use Modules\Inventory\Http\Controllers\PublicRecommendationsController;
 
+// DEBUG
+\Illuminate\Support\Facades\Log::debug('Inventory public.php routes loading');
+
 // DEBUG: Test route
-Route::get('test-widget', function() { return "Widget route works!"; });
+Route::get('test-widget', function() { 
+    \Illuminate\Support\Facades\Log::debug('Test route accessed!');
+    return "Widget route works!"; 
+});
 
 // Public APIs for Shoptet plugin - registered with /api prefix by RouteServiceProvider
 // Widget endpoint: /api/widgets/inventory/recommendations.js
