@@ -27,13 +27,13 @@ class PublicRecommendationsController extends Controller
     public function products(Request $request): JsonResponse
     {
         try {
-            // Validate input
-            $productId = (int) $request->query('product_id', 0);
+            // Get variant ID - could be UUID or integer
+            $variantIdParam = $request->query('product_id');
             $limit = (int) $request->query('limit', 8);
             $mode = (string) $request->query('mode', 'product'); // product|fragrance|nonfragrance
 
-            // Validate limits
-            if ($productId <= 0) {
+            // Validate inputs
+            if (!$variantIdParam) {
                 return response()->json([
                     'error' => 'Invalid product_id',
                     'recommendations' => [],
@@ -42,10 +42,13 @@ class PublicRecommendationsController extends Controller
 
             $limit = max(1, min($limit, 20)); // 1-20 limit
 
-            // Try to find the product variant
-            $variant = ProductVariant::find($productId);
+            // Find variant by ID (handles both UUID and integer Eloquent PKs)
+            $variant = ProductVariant::query()
+                ->where('id', $variantIdParam)
+                ->orWhere('code', $variantIdParam)  // Also allow lookup by code
+                ->first();
 
-            if (! $variant) {
+            if (!$variant) {
                 return response()->json([
                     'error' => 'Product not found',
                     'recommendations' => [],
