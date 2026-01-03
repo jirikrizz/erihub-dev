@@ -14,26 +14,31 @@ class ProductWidgetEmbedController extends Controller
 
     public function script(string $token)
     {
-        $widget = ProductWidget::query()
-            ->where('public_token', $token)
-            ->with('items')
-            ->firstOrFail();
+        $cacheKey = "widget:embed:{$token}";
+        $cacheTtl = 3600; // 1 hour
 
-        if ($widget->status !== 'published') {
-            abort(404);
-        }
+        return cache()->remember($cacheKey, $cacheTtl, function () use ($token) {
+            $widget = ProductWidget::query()
+                ->where('public_token', $token)
+                ->with('items')
+                ->firstOrFail();
 
-        $render = $this->renderer->render($widget);
+            if ($widget->status !== 'published') {
+                abort(404);
+            }
 
-        return response()->view('pim::widgets.script', [
-            'token' => $widget->public_token,
-            'html' => $render['html'],
-            'styles' => $render['styles'],
-            'containerId' => $render['settings']['container_id'] ?? null,
-            'containerClass' => $render['settings']['container_class'] ?? null,
-        ], 200, [
-            'Content-Type' => 'application/javascript; charset=UTF-8',
-            'Cache-Control' => 'public, max-age=60',
-        ]);
+            $render = $this->renderer->render($widget);
+
+            return response()->view('pim::widgets.script', [
+                'token' => $widget->public_token,
+                'html' => $render['html'],
+                'styles' => $render['styles'],
+                'containerId' => $render['settings']['container_id'] ?? null,
+                'containerClass' => $render['settings']['container_class'] ?? null,
+            ], 200, [
+                'Content-Type' => 'application/javascript; charset=UTF-8',
+                'Cache-Control' => 'public, max-age=3600, s-maxage=3600',
+            ]);
+        });
     }
 }
