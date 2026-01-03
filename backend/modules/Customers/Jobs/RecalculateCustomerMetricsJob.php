@@ -84,5 +84,8 @@ class RecalculateCustomerMetricsJob implements ShouldQueue
         });
 
         ApplyCustomerTagRulesJob::dispatch($this->customerGuids)->onQueue($this->queue);
+        } finally {
+            $this->releaseLock();
+        }
     }
 }
