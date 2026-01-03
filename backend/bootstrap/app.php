@@ -28,13 +28,4 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return redirect()->guest('/');
         });
-    })
-    ->withEvents(callback: function () {
-        // Register public widget routes
-        \Illuminate\Support\Facades\Route::get('/api/widgets/inventory/recommendations.js', 
-            function () {
-                return response()->json(['error' => 'Not found'], 404);
-            }
-        );
-    })
-    ->create();
+    })->create();
