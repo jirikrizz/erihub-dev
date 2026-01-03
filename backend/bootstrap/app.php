@@ -28,6 +28,14 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $exception, $request) {
+            \Log::warning('AuthenticationException caught', [
+                'path' => $request->path(),
+                'url' => $request->url(),
+                'expects_json' => $request->expectsJson(),
+                'is_api' => $request->is('api/*'),
+                'message' => $exception->getMessage(),
+            ]);
+            
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['message' => $exception->getMessage()], 401);
             }
