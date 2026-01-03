@@ -210,6 +210,9 @@ class CustomerController extends Controller
         );
 
         $customers->getCollection()->each(function (Customer $customer) use ($completedStatuses, $problemStatuses) {
+            // Unload shop relation to avoid massive payload (~2KB per customer)
+            $customer->unsetRelation('shop');
+
             $customer->setAttribute('base_currency', $this->currencyConverter->getBaseCurrency());
 
             $orderProviders = $customer->getAttribute('order_providers');
