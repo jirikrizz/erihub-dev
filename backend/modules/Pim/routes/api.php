@@ -11,6 +11,9 @@ use Modules\Pim\Http\Controllers\CategoryProductPriorityController;
 use Modules\Pim\Http\Controllers\ShopCategoryNodeController;
 use Modules\Pim\Http\Controllers\AttributeMappingController;
 use Modules\Pim\Http\Controllers\ProductWidgetController;
+use Modules\Pim\Http\Controllers\AutoWidgetController;
+use Modules\Pim\Http\Controllers\ProductWidgetAnalyticsController;
+use Modules\Pim\Http\Controllers\WidgetAnalyticsController;
 
 Route::get('config/locales', [ConfigController::class, 'locales']);
 
@@ -59,3 +62,17 @@ Route::post('product-widgets', [ProductWidgetController::class, 'store']);
 Route::get('product-widgets/{productWidget}', [ProductWidgetController::class, 'show']);
 Route::put('product-widgets/{productWidget}', [ProductWidgetController::class, 'update']);
 Route::delete('product-widgets/{productWidget}', [ProductWidgetController::class, 'destroy']);
+
+// Admin widget analytics (authenticated)
+Route::get('widgets/analytics/top', [WidgetAnalyticsController::class, 'top']);
+Route::get('widgets/{widget}/analytics', [WidgetAnalyticsController::class, 'show']);
+
+// Widget analytics (public token-based)
+Route::post('product-widgets/{publicToken}/events/impression', [ProductWidgetAnalyticsController::class, 'impression']);
+Route::post('product-widgets/{publicToken}/events/click', [ProductWidgetAnalyticsController::class, 'click']);
+
+// Auto-widget generation from HUB
+Route::post('auto-widgets/nonFragrance', [AutoWidgetController::class, 'buildNonFragrance']);
+Route::post('auto-widgets/products', [AutoWidgetController::class, 'buildProducts']);
+Route::post('auto-widgets/preview', [AutoWidgetController::class, 'preview']);
+

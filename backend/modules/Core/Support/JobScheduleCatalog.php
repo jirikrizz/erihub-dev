@@ -141,6 +141,17 @@ class JobScheduleCatalog
                 ],
             ],
         ],
+        'products.sync_all_shops' => [
+            'label' => 'Sync produktů ze VŠECH shopů',
+            'description' => 'Pravidelně stahuje produkty ze VŠECH shopů (CZ, SK, HU, RO, HR) pro získání cen, linků, názvů per locale.',
+            'default_frequency' => JobScheduleFrequency::DAILY,
+            'default_cron' => '0 4 * * *',
+            'default_timezone' => 'Europe/Prague',
+            'supports_shop' => false,
+            'default_options' => [
+                'shop_ids' => [], // Prázdné = všechny shopy, nebo [1,2,3] pro konkrétní
+            ],
+        ],
     ];
 
     /**

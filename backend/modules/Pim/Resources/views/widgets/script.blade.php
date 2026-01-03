@@ -84,13 +84,26 @@
   }
 
   if (styles) {
-    var styleId = 'kv-widget-style-' + token;
-    if (!document.getElementById(styleId)) {
-      var styleTag = document.createElement('style');
-      styleTag.id = styleId;
-      styleTag.type = 'text/css';
-      styleTag.textContent = styles;
-      document.head.appendChild(styleTag);
+    // If styles is a URL (starts with / or http), load external CSS
+    if (typeof styles === 'string' && (styles.startsWith('/') || styles.startsWith('http'))) {
+      var linkId = 'kv-widget-stylesheet-' + token;
+      if (!document.getElementById(linkId)) {
+        var linkTag = document.createElement('link');
+        linkTag.id = linkId;
+        linkTag.rel = 'stylesheet';
+        linkTag.href = styles;
+        document.head.appendChild(linkTag);
+      }
+    } else {
+      // Legacy: inline CSS in <style> tag
+      var styleId = 'kv-widget-style-' + token;
+      if (!document.getElementById(styleId)) {
+        var styleTag = document.createElement('style');
+        styleTag.id = styleId;
+        styleTag.type = 'text/css';
+        styleTag.textContent = styles;
+        document.head.appendChild(styleTag);
+      }
     }
   }
 
@@ -112,8 +125,70 @@
 
   container.setAttribute('data-kv-widget-loaded', '1');
 
+  var impressionsSent = false;
+
+  // --- Analytics: impressions (viewport-aware, once) ---
+  try {
+    var scheduleImpressions = function () {
+      if (impressionsSent) return;
+      var payload = collectImpressionItems(container);
+      if (!payload.length) return;
+
+      var sendOnce = function () {
+        if (impressionsSent) return;
+        impressionsSent = true;
+        sendWidgetEvent('impression', payload);
+      };
+
+      if (typeof IntersectionObserver === 'function' && container && container.getBoundingClientRect) {
+        var observer = new IntersectionObserver(function (entries, obs) {
+          for (var i = 0; i < entries.length; i++) {
+            var entry = entries[i];
+            if (entry && (entry.isIntersecting || entry.intersectionRatio > 0)) {
+              obs.disconnect();
+              sendOnce();
+              return;
+            }
+          }
+        }, { threshold: 0.1 });
+        observer.observe(container);
+        return;
+      }
+
+      sendOnce();
+    };
+
+    scheduleImpressions();
+  } catch (error) {}
+
   var sliderTarget = container.querySelector ? container.querySelector('.kv-widget-slider') : null;
   var sliderController = setupResponsiveSlider(sliderTarget);
+
+  // --- Analytics: clicks ---
+  try {
+    container.addEventListener('click', function (ev) {
+      var target = ev.target;
+      if (!target) return;
+
+      var anchor = target.closest ? target.closest('a, button') : null;
+      if (!anchor) return;
+
+      var itemEl = anchor.closest ? anchor.closest('[data-kv-widget-item]') : null;
+      if (!itemEl) return;
+
+      sendWidgetEvent('click', [{
+        product_widget_item_id: itemEl.getAttribute('data-widget-item-id') || null,
+        product_id: itemEl.getAttribute('data-product-id') || null,
+        product_variant_id: itemEl.getAttribute('data-variant-id') || null,
+        shop_id: container.getAttribute('data-shop-id') || null,
+        locale: container.getAttribute('data-locale') || null,
+        meta: {
+          href: anchor.href || null,
+          type: anchor.tagName ? anchor.tagName.toLowerCase() : null,
+        },
+      }]);
+    }, { passive: true });
+  } catch (error) {}
 
   var originalInfoCache = Object.create(null);
   var SHOP_CDN_ORIGIN = 'https://cdn.myshoptet.com';
@@ -233,6 +308,56 @@
       return '';
     }
     return text;
+  }
+
+  function collectImpressionItems(root) {
+    var result = [];
+    if (!root || !root.querySelectorAll) {
+      return result;
+    }
+    var shopId = root.getAttribute('data-shop-id') || null;
+    var locale = root.getAttribute('data-locale') || null;
+    var itemNodes = root.querySelectorAll('[data-kv-widget-item]');
+    itemNodes.forEach(function (node) {
+      result.push({
+        product_widget_item_id: node.getAttribute('data-widget-item-id') || null,
+        product_id: node.getAttribute('data-product-id') || null,
+        product_variant_id: node.getAttribute('data-variant-id') || null,
+        shop_id: shopId,
+        locale: locale,
+      });
+    });
+    return result;
+  }
+
+// Analytics dispatch: prefer sendBeacon to avoid losing events on navigation; fetch keepalive as fallback.
+    function sendWidgetEvent(eventType, items) {
+    if (!eventType || !items || !items.length) return;
+    var url = '/api/pim/product-widgets/' + encodeURIComponent(token) + '/events/' + eventType;
+    var payload = JSON.stringify({ items: items });
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        var blob = new Blob([payload], { type: 'application/json' });
+        var sent = navigator.sendBeacon(url, blob);
+        if (sent) return;
+      }
+    } catch (error) {}
+
+    if (typeof fetch !== 'function') return;
+
+    try {
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: payload,
+        keepalive: true,
+      }).catch(function () {});
+    } catch (error) {
+      // swallow
+    }
   }
 
   function limitWords(text, maxWords) {

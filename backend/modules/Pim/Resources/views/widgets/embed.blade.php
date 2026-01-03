@@ -1,12 +1,18 @@
 @php
+    use App\Constants\CurrencyMap;
     use Illuminate\Support\Arr;
     use Illuminate\Support\Str;
 
     /** @var \Modules\Pim\Models\ProductWidget $widget */
     /** @var \Illuminate\Support\Collection<int, array<string, mixed>> $items */
     /** @var array<string, mixed> $settings */
+    /** @var string $currencySymbol */
 
     $heading = $settings['heading'] ?? ($settings['title'] ?? 'Podobné produkty');
+
+    // Determine locale - use widget locale with fallback to 'cs'
+    $locale = $widget->locale ?? 'cs';
+    $currencySymbol = $currencySymbol ?? 'Kč';
 
     $extractInt = static function ($value): ?int {
         if ($value === null) {
@@ -24,8 +30,8 @@
         return $numeric === '' ? null : (int) $numeric;
     };
 
-    $formatPrice = static function (?int $value): ?string {
-        return $value === null ? null : sprintf('%d Kč', $value);
+    $formatPrice = static function (?int $value, string $locale = 'cs'): ?string {
+        return CurrencyMap::formatPrice($value, $locale);
     };
 
     $normalizeVolume = static function (?string $volume, ?string $unit, ?string $fallbackLabel) {
@@ -271,6 +277,8 @@
     class="{{ e($containerClassComputed) }}"
     data-kv-widget="{{ e($widget->public_token) }}"
     data-widget-items="{{ $items->count() }}"
+    data-shop-id="{{ e($widget->shop_id) }}"
+    data-locale="{{ e($widget->locale ?? 'cs') }}"
 >
     <style>
         #{{ e($settings['container_id']) }} {
@@ -525,7 +533,7 @@
                 type="button"
                 aria-label="Předchozí produkt"
                 disabled
-                style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(208, 213, 232, 0.8); background: #ffffff; color: #1fb56b; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 14px 28px rgba(31, 181, 107, 0.2); transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; position: absolute; top: 50%; transform: translateY(-50%); left: 8px; z-index: 2;"
+                style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(208, 213, 232, 0.8); background: #ffffff; color: #1fb56b; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; position: absolute; top: 50%; transform: translateY(-50%); left: 8px; z-index: 2;"
             >
                 <span aria-hidden="true" style="font-size: 24px; line-height: 1; font-weight: 600;">‹</span>
             </button>
@@ -626,8 +634,8 @@
                         if ($priceDiscountPercent === null && $priceCurrentInt !== null && $priceOriginalInt !== null && $priceOriginalInt > 0) {
                             $priceDiscountPercent = (int) round(max(0, 100 - ($priceCurrentInt / $priceOriginalInt) * 100));
                         }
-                        $priceCurrentDisplay = ($formatPrice)($priceCurrentInt);
-                        $priceOriginalDisplay = ($formatPrice)($priceOriginalInt);
+                        $priceCurrentDisplay = ($formatPrice)($priceCurrentInt, $locale);
+                        $priceOriginalDisplay = ($formatPrice)($priceOriginalInt, $locale);
                         $discountDisplay = $priceDiscountPercent !== null ? sprintf('%d %%', $priceDiscountPercent) : null;
                         $showDiscount = $priceCurrentInt !== null && $priceOriginalInt !== null && $priceCurrentInt < $priceOriginalInt;
 
@@ -691,17 +699,17 @@
                                 ?? $option['variant_price_display']
                                 ?? $option['variant_price']
                                 ?? $option['price']
-                                ?? ($optionPriceInt !== null ? ($formatPrice)($optionPriceInt) : null);
+                                ?? ($optionPriceInt !== null ? ($formatPrice)($optionPriceInt, $locale) : null);
                             if ($optionPriceDisplay !== null && is_numeric($optionPriceDisplay)) {
-                                $optionPriceDisplay = ($formatPrice)((int) $optionPriceDisplay);
+                                $optionPriceDisplay = ($formatPrice)((int) $optionPriceDisplay, $locale);
                             }
                             $optionOriginalDisplay = $option['variant_original_price_display']
                                 ?? $option['base_price']
                                 ?? $option['variant_original_price']
                                 ?? $option['original_price']
-                                ?? ($optionOriginalInt !== null ? ($formatPrice)($optionOriginalInt) : null);
+                                ?? ($optionOriginalInt !== null ? ($formatPrice)($optionOriginalInt, $locale) : null);
                             if ($optionOriginalDisplay !== null && is_numeric($optionOriginalDisplay)) {
-                                $optionOriginalDisplay = ($formatPrice)((int) $optionOriginalDisplay);
+                                $optionOriginalDisplay = ($formatPrice)((int) $optionOriginalDisplay, $locale);
                             }
 
                             $optionBrand = $normalizeOptionalString($option['inspired_by_brand'] ?? null);
@@ -817,16 +825,16 @@
                                 $priceCurrentDisplay = $preselectedVariant['variant_price_display']
                                     ?? $preselectedVariant['variant_action_price']
                                     ?? $preselectedVariant['action_price']
-                                    ?? ($priceCurrentInt !== null ? ($formatPrice)($priceCurrentInt) : null);
+                                    ?? ($priceCurrentInt !== null ? ($formatPrice)($priceCurrentInt, $locale) : null);
                                 $priceOriginalDisplay = $preselectedVariant['variant_original_price_display']
                                     ?? $preselectedVariant['base_price']
-                                    ?? ($priceOriginalInt !== null ? ($formatPrice)($priceOriginalInt) : null);
+                                    ?? ($priceOriginalInt !== null ? ($formatPrice)($priceOriginalInt, $locale) : null);
 
                                 if (isset($preselectedVariant['variant_discount_percentage']) && $preselectedVariant['variant_discount_percentage'] !== null) {
                                     $priceDiscountPercent = (int) $preselectedVariant['variant_discount_percentage'];
                                     $discountDisplay = sprintf('%d %%', $priceDiscountPercent);
                                 } elseif (isset($preselectedVariant['variant_discount_value']) && $preselectedVariant['variant_discount_value'] !== null) {
-                                    $discountDisplay = ($formatPrice)((int) $preselectedVariant['variant_discount_value']);
+                                    $discountDisplay = ($formatPrice)((int) $preselectedVariant['variant_discount_value'], $locale);
                                     if ($priceCurrentInt !== null && $priceOriginalInt !== null && $priceOriginalInt > 0 && $priceCurrentInt < $priceOriginalInt) {
                                         $priceDiscountPercent = (int) round(max(0, 100 - ($priceCurrentInt / $priceOriginalInt) * 100));
                                     } else {
@@ -877,7 +885,15 @@
                             }
                         }
                     @endphp
-                    <div class="kv-widget-slide" style="flex: 0 0 auto; display: flex; justify-content: center;">
+                    <div
+                        class="kv-widget-slide"
+                        style="flex: 0 0 auto; display: flex; justify-content: center;"
+                        data-kv-widget-item="1"
+                        data-widget-item-id="{{ e($item['product_widget_item_id'] ?? '') }}"
+                        data-widget-id="{{ e($item['product_widget_id'] ?? '') }}"
+                        data-product-id="{{ e($item['product_id'] ?? '') }}"
+                        data-variant-id="{{ e($item['product_variant_id'] ?? '') }}"
+                    >
                         <div
                             class="product brx-product"
                             product-master-id="{{ e($metadata['product_master_id'] ?? $item['item_id'] ?? '') }}"
@@ -1033,20 +1049,20 @@
                                                         ?? ($option['variant_action_price'] ?? $option['action_price'] ?? $option['variant_price'] ?? $option['price'] ?? null)
                                                         ?? null;
                                                     if ($variantPriceDisplay === null && isset($option['price_value'])) {
-                                                        $variantPriceDisplay = $formatPrice((int) $option['price_value']);
+                                                        $variantPriceDisplay = $formatPrice((int) $option['price_value'], $locale);
                                                     } elseif ($variantPriceDisplay !== null && is_numeric($variantPriceDisplay)) {
-                                                        $variantPriceDisplay = $formatPrice((int) $variantPriceDisplay);
+                                                        $variantPriceDisplay = $formatPrice((int) $variantPriceDisplay, $locale);
                                                     }
 
                                                     $variantOriginalPriceDisplay = $option['variant_original_price_display'] ?? null;
                                                     if ($variantOriginalPriceDisplay === null) {
                                                         if (isset($option['base_price'])) {
                                                             $variantOriginalPriceDisplay = is_numeric($option['base_price'])
-                                                                ? $formatPrice((int) $option['base_price'])
+                                                                ? $formatPrice((int) $option['base_price'], $locale)
                                                                 : (string) $option['base_price'];
                                                         } elseif (isset($option['variant_original_price'])) {
                                                             $variantOriginalPriceDisplay = is_numeric($option['variant_original_price'])
-                                                                ? $formatPrice((int) $option['variant_original_price'])
+                                                                ? $formatPrice((int) $option['variant_original_price'], $locale)
                                                                 : (string) $option['variant_original_price'];
                                                         }
                                                     }
@@ -1146,7 +1162,7 @@
                 class="kv-widget-nav kv-widget-next"
                 type="button"
                 aria-label="Další produkt"
-                style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(208, 213, 232, 0.8); background: #ffffff; color: #1fb56b; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 14px 28px rgba(31, 181, 107, 0.2); transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; position: absolute; top: 50%; transform: translateY(-50%); right: 8px; z-index: 2;"
+                style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(208, 213, 232, 0.8); background: #ffffff; color: #1fb56b; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; position: absolute; top: 50%; transform: translateY(-50%); right: 8px; z-index: 2;"
             >
                 <span aria-hidden="true" style="font-size: 24px; line-height: 1; font-weight: 600;">›</span>
             </button>

@@ -30,6 +30,15 @@ class Kernel extends ConsoleKernel
             ->name('retry-failed-snapshots')
             ->withoutOverlapping(60)
             ->onQueue('snapshots');
+
+        // Aggregate widget analytics - daily at 3:00 AM UTC
+        $schedule->job(new \Modules\Pim\Jobs\AggregateWidgetStatsJob)
+            ->dailyAt('03:00')
+            ->name('aggregate-widget-stats')
+            ->withoutOverlapping(60)
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('Widget analytics aggregation failed');
+            });
     }
 
     protected function commands(): void

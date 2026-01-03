@@ -15,6 +15,7 @@ use Modules\Shoptet\Jobs\RefreshOrderStatusesJob;
 use Modules\Shoptet\Jobs\ImportMasterProductsJob;
 use Modules\WooCommerce\Jobs\SyncWooCommerceOrdersJob;
 use Modules\Shoptet\Jobs\RequestCustomersSnapshotJob;
+use Modules\Shoptet\Jobs\SyncAllShopsProductsJob;
 
 class RunJobSchedulesCommand extends Command
 {
@@ -90,6 +91,7 @@ class RunJobSchedulesCommand extends Command
         return match ($schedule->job_type) {
             'orders.fetch_new' => $this->dispatchFetchNewOrders($schedule),
             'products.import_master' => $this->dispatchProductImport($schedule),
+            'products.sync_all_shops' => $this->dispatchSyncAllShops($schedule),
             'customers.recalculate_metrics' => $this->dispatchCustomerMetrics($schedule),
             'customers.backfill_from_orders' => $this->dispatchCustomerBackfill($schedule),
             'customers.fetch_shoptet' => $this->dispatchCustomerSnapshot($schedule),
@@ -112,6 +114,13 @@ class RunJobSchedulesCommand extends Command
     private function dispatchProductImport(JobSchedule $schedule): bool
     {
         ImportMasterProductsJob::dispatch($schedule->id);
+
+        return true;
+    }
+
+    private function dispatchSyncAllShops(JobSchedule $schedule): bool
+    {
+        SyncAllShopsProductsJob::dispatch($schedule->id);
 
         return true;
     }
