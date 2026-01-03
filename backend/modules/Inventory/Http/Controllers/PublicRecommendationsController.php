@@ -69,15 +69,49 @@ class PublicRecommendationsController extends Controller
                 default => $this->recommendationService->recommendByInspirationType($variant, $limit, 'product'),
             };
 
+            // Load full product data for URLs and images
+            $variantIds = array_column(array_column($recommendations, 'variant'), 'id');
+            $variantsWithProducts = ProductVariant::query()
+                ->with('product')
+                ->whereIn('id', $variantIds)
+                ->get()
+                ->keyBy('id');
+
             // Transform recommendations to minimal JSON format for embedding
-            $transformed = array_map(function ($rec) {
+            $transformed = array_map(function ($rec) use ($variantsWithProducts) {
+                $variant = $rec['variant'] ?? [];
+                $variantId = $variant['id'] ?? null;
+                $fullVariant = $variantId ? $variantsWithProducts->get($variantId) : null;
+                $product = $fullVariant?->product;
+                $basePayload = $product?->base_payload ?? [];
+                
+                // Build Shoptet URL
+                $productName = $basePayload['name'] ?? null;
+                $productGuid = $basePayload['guid'] ?? null;
+                $url = null;
+                if ($productName && $productGuid) {
+                    // Format: https://www.krasnevune.cz/product-name-guid
+                    $slug = \Illuminate\Support\Str::slug($productName);
+                    $url = "https://www.krasnevune.cz/{$slug}-{$productGuid}";
+                }
+                
+                // Get first image
+                $image = null;
+                if (isset($basePayload['images'][0])) {
+                    $imageData = $basePayload['images'][0];
+                    // Shoptet CDN format: https://cdn.myshoptet.com/usr/www.krasnevune.cz/user/shop/big/{cdnName}
+                    if (isset($imageData['cdnName'])) {
+                        $image = "https://cdn.myshoptet.com/usr/www.krasnevune.cz/user/shop/big/{$imageData['cdnName']}";
+                    }
+                }
+                
                 return [
-                    'id' => $rec['id'] ?? null,
-                    'name' => $rec['name'] ?? null,
-                    'image' => $rec['image'] ?? null,
-                    'price' => $rec['price'] ?? null,
-                    'original_price' => $rec['original_price'] ?? null,
-                    'url' => $rec['url'] ?? null,
+                    'id' => $variant['id'] ?? null,
+                    'name' => $variant['name'] ?? null,
+                    'image' => $image,
+                    'price' => $variant['price'] ?? null,
+                    'original_price' => null,
+                    'url' => $url,
                 ];
             }, $recommendations);
 

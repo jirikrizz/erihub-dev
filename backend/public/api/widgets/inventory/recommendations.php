@@ -8,17 +8,23 @@ header('Content-Type: application/javascript; charset=utf-8');
 // The actual data will be fetched from the protected /api/inventory/recommendations/products endpoint
 ?>
 (function() {
-    const productId = new URLSearchParams(window.location.search).get('product_id');
-    const limit = new URLSearchParams(window.location.search).get('limit') || 8;
-    const containerId = new URLSearchParams(window.location.search).get('container') || 'reco-product';
+    // Get parameters from the widget script URL (not window.location)
+    const scriptSrc = document.currentScript?.src || '';
+    const scriptParams = new URL(scriptSrc, window.location.origin).searchParams;
+    
+    // Accept both product_id and product_code (plugin sends product_code)
+    const productId = scriptParams.get('product_code') || scriptParams.get('product_id');
+    const limit = scriptParams.get('limit') || 8;
+    const containerId = scriptParams.get('container') || 'reco-product';
+    const mode = scriptParams.get('mode') || 'product';
     
     if (!productId) {
-        console.warn('Widget: product_id parameter missing');
+        console.warn('Widget: product_code parameter missing');
         return;
     }
     
     // Fetch recommendations from the protected API endpoint
-    const url = `/api/inventory/recommendations/products?product_id=${productId}&limit=${limit}`;
+    const url = `/api/inventory/recommendations/products?product_id=${encodeURIComponent(productId)}&limit=${limit}&mode=${mode}`;
     
     fetch(url)
         .then(res => {
