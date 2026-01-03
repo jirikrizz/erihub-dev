@@ -1,17 +1,30 @@
 <?php
-// Public widget endpoint - served directly by Nginx without Laravel routing
-// This bypasses all middleware issues
+// Public widget endpoint - served directly by Nginx
+// This file is served as a PHP script directly without going through Laravel routing
 
-require __DIR__ . '/../../../bootstrap/app.php';
+// Create a minimal Illuminate app just to load the controller
+$basePath = dirname(__DIR__) . '/../..';
+require $basePath . '/bootstrap/app.php';
 
-use Illuminate\Http\Request;
+// Capture the request
+$request = \Illuminate\Http\Request::capture();
 
-$app = require_once __DIR__ . '/../../../bootstrap/app.php';
+// Disable all middleware and services
+$kernel = app(\Illuminate\Contracts\Http\Kernel::class);
 
-$request = Request::capture();
-
-// Load Inventory module controller
+// Call the controller method directly
 $controller = new \Modules\Inventory\Http\Controllers\InventoryRecommendationWidgetController();
-$response = $controller->script($request);
 
-$response->send();
+try {
+    // Set proper content type for JavaScript
+    header('Content-Type: application/javascript; charset=utf-8');
+    
+    // Call the controller method
+    $response = $controller->script($request);
+    
+    // Send response
+    $response->header('Content-Type', 'application/javascript')->send();
+} catch (\Exception $e) {
+    header('Content-Type: application/javascript; charset=utf-8', true, 500);
+    echo 'console.error("Widget error: ' . addslashes($e->getMessage()) . '");';
+}

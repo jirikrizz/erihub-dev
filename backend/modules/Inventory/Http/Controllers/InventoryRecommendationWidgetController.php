@@ -152,6 +152,11 @@ class InventoryRecommendationWidgetController extends Controller
 
     public function script(Request $request)
     {
+        \Log::warning('Widget script called - SUCCESS!', [
+            'path' => $request->path(),
+            'product_id' => $request->get('product_id'),
+        ]);
+        
         \Log::warning('Widget script called', [
             'path' => $request->path(),
             'url' => $request->url(),
