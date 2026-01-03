@@ -14,8 +14,6 @@ hub.krasnevune.cz {
 
 		handle /api/widgets* {
 			reverse_proxy nginx:80 {
-				header_uri -X-Forwarded-Uri
-				header_host X-Forwarded-Host
 				header_up X-Forwarded-Proto https
 				header_up X-Forwarded-Host {http.request.host}
 				header_up X-Forwarded-For {http.request.remote}
