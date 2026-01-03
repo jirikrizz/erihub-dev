@@ -42,11 +42,18 @@ class PublicRecommendationsController extends Controller
 
             $limit = max(1, min($limit, 20)); // 1-20 limit
 
-            // Find variant by ID (handles both UUID and integer Eloquent PKs)
+            // Find variant by ID or code
+            // First try by code (since plugin might pass code instead of UUID)
             $variant = ProductVariant::query()
-                ->where('id', (string) $variantIdParam)
-                ->orWhere('code', (string) $variantIdParam)  // Also allow lookup by code
+                ->where('code', (string) $variantIdParam)
                 ->first();
+            
+            // If not found by code, try by UUID id
+            if (!$variant && strlen($variantIdParam) === 36) {  // UUID length
+                $variant = ProductVariant::query()
+                    ->where('id', (string) $variantIdParam)
+                    ->first();
+            }
 
             if (!$variant) {
                 return response()->json([
