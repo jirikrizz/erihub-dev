@@ -15,13 +15,5 @@ class RouteServiceProvider extends ServiceProvider
         Route::prefix('api/inventory')
             ->middleware(['api', 'auth:sanctum', 'permission:section.inventory'])
             ->group(__DIR__.'/routes/api.php');
-
-        // Public widget endpoint - explicitly skip ALL middleware
-        Route::withoutMiddleware(['api', 'auth:sanctum', 'permission:section.inventory', 'web'])
-            ->get('/api/widgets/inventory/recommendations.js', [InventoryRecommendationWidgetController::class, 'script']);
-        
-        // Public recommendations API - explicitly skip ALL middleware
-        Route::withoutMiddleware(['api', 'auth:sanctum', 'permission:section.inventory', 'web'])
-            ->get('/api/inventory/recommendations/products', [PublicRecommendationsController::class, 'products']);
     }
 }
